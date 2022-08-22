@@ -107,7 +107,7 @@ wbPDF* wbEvent::createPDFs(std::vector<wbHit> list, double prompt_cut, double wa
     wbpdf->SetThetaPDFBinning(nbins,-3.14,3.14);
   else 
     wbpdf->SetThetaPDFBinning(nbins,-1,1);
-  cout<<"creating pdf.. total wbhit number "<<list.size()<<endl;
+  cout<<"creating pdf in original place.. total wbhit number "<<list.size()<<endl;
   for (wbHit i: list){
     //cout<<"prompt cut "<<prompt_cut<<endl;
     if (i.t > prompt_cut) continue;
@@ -189,7 +189,7 @@ std::vector<wbPDF*> wbEvent::createPMTPDFs(std::vector<wbHit> list, double promp
     wbpdf[ipmt] = new wbPDF("_wbpdf");
     wbpdf[ipmt]->SetPMTPDFBinning(nbins,0,3.14,nbins,0,6.28);
   }
-  cout<<"creating pdf.. total wbhit number "<<list.size()<<endl;
+  cout<<"creating pdf in PMTPDF.. total wbhit number "<<list.size()<<endl;
   for (wbHit i: list){
     //cout<<"prompt cut "<<prompt_cut<<endl;
     if (i.t > prompt_cut) continue;
@@ -230,6 +230,120 @@ std::vector<wbPDF*> wbEvent::createPMTPDFs(std::vector<wbHit> list, double promp
   }
   return wbpdf;
 }
+
+std::vector<wbPDF*> wbEvent::createPMTPDFs(std::vector<wbHit> list, double time1, double time2, double wavelength_cut, bool doCharge, bool doCos, int nbins){
+  // Ben Land's code at the end of the script
+  double c = 300/1.333; //mm/ns
+
+  int count = 0;
+
+  std::vector<wbPDF*> wbpdf(500);
+  for (int ipmt = 0; ipmt< 500;ipmt++){
+    wbpdf[ipmt] = new wbPDF("_wbpdf");
+    wbpdf[ipmt]->SetPMTPDFBinning(nbins,0,3.14,nbins,0,6.28);
+  }
+  cout<<"creating pdf PMTPDF2.. total wbhit number "<<list.size()<<endl;
+  for (wbHit i: list){
+    //cout<<"prompt cut "<<prompt_cut<<endl;
+    if (!(i.t < time2-2 && i.t > time1-2)) continue;
+    double x     = i.trX;
+    double y     = i.trY;
+    double z     = i.trZ;
+    int pmtid = i.pmtid;
+    double t     = i.trTime;
+    double theta = i.trTheta;
+    double phi   = i.trPhi;
+
+    //cout<<"element "<<count<<" out of "<<list.size()<<" pmt id "<<pmtid<<" theta and phi "<<theta<<" "<<phi<<endl;
+    //cout<<"element "<<count<<"   x y z t theta phi "<<x<<" "<<y<<" "<<z<<" "<<theta<<" "<<phi<<endl;
+    //cout<<"i.x  i.y  i.z  i.t "<<i.x<<" "<<i.y<<" "<<i.z<<" "<<i.t<<endl;
+
+    TVector3 P (i.x - x, i.y - y, i.z - z);
+    double D = TMath::Sqrt(TMath::Power(i.x - x, 2) + TMath::Power(i.y - y, 2) + TMath::Power(i.z - z, 2));
+    double T = i.t - t;
+    //double tresid = T - D/c;
+    double tresid = T;
+    TVector3 dvec (TMath::Cos(phi)*TMath::Sin(theta), TMath::Sin(phi)*TMath::Sin(theta), TMath::Cos(theta));
+
+    if (doCos)
+      int nothing = 1;
+    else
+      int nothing = 1;
+
+    double no_wavelength_cut = wavelength_cut;
+
+    if (doCharge){
+      wbpdf[pmtid]->GetPMTPDF()->TH2F::Fill(theta, phi, i.charge);
+    }
+    else{
+      double geoWei = 2*TMath::Pi()* (1-TMath::Cos(abs(theta)) ) - 2*TMath::Pi()* (1-TMath::Cos(abs(theta)-0.01) );
+      wbpdf[pmtid]->GetPMTPDF()->TH2F::Fill(theta, phi, 1./geoWei);
+    }
+    count ++;
+  }
+  return wbpdf;
+}
+
+std::vector<wbPDF*> wbEvent::createDirPDFs(std::vector<wbHit> list, double time1, double time2, double wavelength_cut, bool doCharge, bool doCos, int nbin_pmt, int nbin_time){
+  // Ben Land's code at the end of the script
+  double c = 300/1.333; //mm/ns
+
+  int count = 0;
+
+  std::vector<wbPDF*> wbpdf(500);
+  for (int idir = 0; idir< 500;idir++){
+    wbpdf[idir] = new wbPDF("_wbpdf");
+    wbpdf[idir]->SetDirPDFBinning(nbin_pmt,0,nbin_pmt,nbin_time,-2,4);
+  }
+  cout<<"creating pdf in dirPDF.. total wbhit number "<<list.size()<<endl;
+  for (wbHit i: list){
+    //cout<<"prompt cut "<<prompt_cut<<endl;
+    //cout<<"time and lower upper cuts "<<i.t<<" "<<time1<<" "<<time2<<endl;
+    if (!(i.t < time2 && i.t > time1)) continue;
+    double x     = i.trX;
+    double y     = i.trY;
+    double z     = i.trZ;
+    int pmtid = i.pmtid;
+    double t     = i.trTime;
+    double theta = i.trTheta;
+    double phi   = i.trPhi;
+    if (phi >6.2832 || theta> 3.1416) {cout<<"phi and theta exceed the limit ! Exit! "<<endl; cout<<phi<<" "<<theta<<endl; continue;} //exit(1);}
+    int hdir = 20*((int)(phi/(6.2832/20.))) + (int)(theta/(3.1416/20.)) ;
+    //cout<<"hit theta phi and hdir "<<theta<<" "<<phi<<" "<<hdir<<endl;
+    
+    TVector3 P (i.x - x, i.y - y, i.z - z);
+    double D = TMath::Sqrt(TMath::Power(i.x - x, 2) + TMath::Power(i.y - y, 2) + TMath::Power(i.z - z, 2));
+    double T = i.t - t;
+    //double tresid = T - D/c;
+    double tresid = T;
+    TVector3 dvec (TMath::Cos(phi)*TMath::Sin(theta), TMath::Sin(phi)*TMath::Sin(theta), TMath::Cos(theta));
+
+    if (doCos)
+      int nothing = 1;
+    else
+      int nothing = 1;
+
+    double no_wavelength_cut = wavelength_cut;
+
+    if (doCharge){
+      wbpdf[hdir]->GetDirPDF()->TH2F::Fill(pmtid, i.t, i.charge);
+    }
+    else{
+      if (hdir == 0 || hdir == 20 || hdir == 40)
+        cout<<"theta, phi, hdir, pmtid, t "<<theta<<" "<<phi<<" "<<hdir<<" "<<pmtid<<" "<<i.t<<endl;
+      //double geoWei = 2*TMath::Pi()* (1-TMath::Cos(abs(theta)) ) - 2*TMath::Pi()* (1-TMath::Cos(abs(theta)-0.01) );
+      wbpdf[hdir]->GetDirPDF()->TH2F::Fill(pmtid, i.t);
+    }
+    count ++;
+  }
+  //for (int iii=0;iii<wbpdf[368]->GetDirPDF()->GetNbinsX(); iii++){
+  //  for (int jjj=0;jjj<wbpdf[368]->GetDirPDF()->GetNbinsY(); jjj++){
+  //    if (wbpdf[368]->GetDirPDF()->GetBinContent(iii+1,jjj+1)>0) cout<<"in Event iii, jjj, pdfss[1] element: "<<iii<<" "<<jjj<<" "<<wbpdf[368]->GetDirPDF()->GetBinContent(iii+1,jjj+1)<<endl;
+  //  }
+  //}
+  return wbpdf;
+}
+
 
 void wbEvent::SetHitList(std::vector<std::vector<double> > num){
   cout<<"total hit size "<<num.size()<<endl;

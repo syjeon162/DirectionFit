@@ -94,11 +94,13 @@ using namespace std;
     TH1F* _thetaPDF;
     TH2F* _timeThetaPDF;
     TH2F* _PMTPDF;
+    TH2F* _dirPDF;
 
     void SetTimePDFBinning (int nbin, double low, double high){ cout<<"set pdf binning "<< nbin<<endl; cout<<"original bin n. "<<_timePDF->TH1F::GetNbinsX()<<endl; _timePDF->TH1F::SetBins(nbin, low, high); cout<<"binning set"<<endl; }
     void SetThetaPDFBinning (int nbin, double low, double high){ _thetaPDF->TH1F::SetBins(nbin, low, high); }
     void SetTimeThetaPDFBinning (int nbin, double low, double high, int nbin2, double low2, double high2){ _timeThetaPDF->TH2F::SetBins(nbin, low, high, nbin2, low2, high2); }
     void SetPMTPDFBinning (int nbin, double low, double high, int nbin2, double low2, double high2){ _PMTPDF->TH2F::SetBins(nbin, low, high, nbin2, low2, high2); }
+    void SetDirPDFBinning (int nbin, double low, double high, int nbin2, double low2, double high2){ _dirPDF->TH2F::SetBins(nbin, low, high, nbin2, low2, high2); }
 
     void SetPMTPDF(std::vector<std::vector<double>> a) {
 	    //cout<<3456<<" "<<a.size()<<" "<<a.at(0).size()<<endl;
@@ -113,6 +115,16 @@ using namespace std;
                    }
             }
     }
+    void SetDirPDF(std::vector<std::vector<double>> a) {
+            if (a.size() != _dirPDF->GetNbinsX() || a.at(0).size() != _dirPDF->GetNbinsY()) {cout<<"setting a pdf with incorrect binning! "<<endl; exit(1);}
+            for (int i=0;i<a.size();i++){
+                   for (int j=0;j<a.at(0).size();j++)
+                   {
+                           _dirPDF ->SetBinContent( i+1,j+1, a.at(i).at(j));
+                   }
+            }
+    }
+
     void SetPMTPDF(TH2F* a) { 
             if (a->GetNbinsX() != _PMTPDF->GetNbinsX() || a->GetNbinsY() != _PMTPDF->GetNbinsY()) {cout<<"setting a pdf with incorrect binning! "<<endl; exit(1);}
             for (int i=0;i<a->GetNbinsX();i++){
@@ -122,11 +134,21 @@ using namespace std;
                    }
             }    
     }
+    void SetDirPDF(TH2F* a) {
+            if (a->GetNbinsX() != _dirPDF->GetNbinsX() || a->GetNbinsY() != _dirPDF->GetNbinsY()) {cout<<"setting a pdf with incorrect binning! "<<endl; exit(1);}
+            for (int i=0;i<a->GetNbinsX();i++){
+                   for (int j=0;j<a->GetNbinsY();j++)
+                   {
+                           _dirPDF ->SetBinContent( i+1,j+1, a->GetBinContent(i+1,j+1));
+                   }
+            }
+    }
 
     TH1F* GetTimePDF(){ return _timePDF; }
     TH1F* GetThetaPDF(){ return _thetaPDF; }
     TH2F* GetTimeThetaPDF(){ return _timeThetaPDF; }
     TH2F* GetPMTPDF(){ return _PMTPDF; }
+    TH2F* GetDirPDF(){ return _dirPDF; }
   };
 
 
@@ -161,6 +183,8 @@ using namespace std;
     wbPDF* createPDFs(std::vector<wbHit> list, double prompt_cut, double wavelength_cut, bool doCharge, bool doCos);
     wbPDF* createPDFs(std::vector<wbHit> list, double prompt_cut, double wavelength_cut, bool doCharge, bool doCos, int nbins);
     std::vector<wbPDF*> createPMTPDFs(std::vector<wbHit> list, double prompt_cut, double wavelength_cut, bool doCharge, bool doCos, int nbins);
+    std::vector<wbPDF*> createPMTPDFs(std::vector<wbHit> list, double time1, double time2, double wavelength_cut, bool doCharge, bool doCos, int nbins);
+    std::vector<wbPDF*> createDirPDFs(std::vector<wbHit> list, double time1, double time2, double wavelength_cut, bool doCharge, bool doCos, int nbin_pmt, int nbin_time);
 
     wbPDF* create2DPDFs(std::vector<wbHit> list, std::vector<std::vector<double> > tPara, double prompt_cut, double wavelength_cut);
     wbPDF* create2DPDFs(std::vector<wbHit> list, double prompt_cut, double wavelength_cut, bool doCharge, bool doCos);
