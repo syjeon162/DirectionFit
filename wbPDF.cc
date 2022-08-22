@@ -36,6 +36,7 @@ wbPDF::wbPDF (const char* name)
 
     _PMTPDF = (TH2F*) new TH2F("","",40,-3.14,3.14,40,-3.14,3.14);
 
+    _dirPDF = (TH2F*) new TH2F("","", 500,0,500, 30, -2,4 );
 }
 
 

@@ -107,16 +107,26 @@ using namespace RooFit;
     Double_t calLikelihood( RooListProxy* _pulls, std::vector<wbEvent::wbHit> hitlist, std::vector<double> vertex, wbPDF* pdf, bool twodpdf ) const;
     Double_t calLikelihood( RooListProxy* _pulls, std::vector<wbEvent::wbHit> hitlist, std::vector<double> vertex, wbPDF* pdf, bool twodpdf, bool doCharge, bool doCos ) const;
     Double_t calPMTLikelihood( RooListProxy* _pulls, std::vector<wbEvent::wbHit> hitlist, std::vector<double> vertex, std::vector<wbPDF*> pdf, bool twodpdf, bool doCharge, bool doCos ) const;
+    Double_t calPMTLikelihood_timeSlice( RooListProxy* _pulls, std::vector<wbEvent::wbHit> hitlist, std::vector<double> vertex, std::vector<std::vector<wbPDF*>> pdff, bool twodpdf, bool doCharge, bool doCos ) const ;
 
+    Double_t calPMTLikelihood( RooListProxy* _pulls, std::vector<wbEvent::wbHit> hitlist, std::vector<double> vertex, std::vector<wbPDF*> pdf, bool twodpdf, bool doCharge, bool doCos, int hitlimit ) const;
+    Double_t calDirLikelihood( RooListProxy* _pulls, std::vector<wbEvent::wbHit> hitlist, std::vector<double> vertex, std::vector<wbPDF*> pdf, bool twodpdf, bool doCharge, bool doCos ) const;
+    Double_t calPMTLikelihood_timeSlice( RooListProxy* _pulls, std::vector<wbEvent::wbHit> hitlist, std::vector<double> vertex, std::vector<std::vector<wbPDF*>> pdff, bool twodpdf, bool doCharge, bool doCos, int hitlimit ) const ;
     Double_t CalPromptCut(std::vector<std::vector<double> > list); 
 
     void ReadingEvents(std::vector<std::vector<double> > pmtlist);
     wbPDF* Reading_Processing_Events(std::vector<std::vector<double> > pmtlist, std::string mode, std::vector<double> vertex, bool twoDpdf, bool doCharge, bool doCos ); 
     std::vector<wbPDF*> Reading_Processing_Events_PerPMT(std::vector<std::vector<double> > pmtlist, std::string mode, std::vector<double> vertex, bool twoDpdf, bool doCharge, bool doCos );
+    std::vector<std::vector<wbPDF*>> Reading_Processing_Events_PerPMT_timeSlice(std::vector<std::vector<double> > pmtlist, std::string mode, std::vector<double> vertex, bool twoDpdf, bool doCharge, bool doCos, double uppertime );
+    std::vector<wbPDF*> Reading_Processing_Events_PerDir(std::vector<std::vector<double> > pmtlist, std::string mode, std::vector<double> vertex, bool twoDpdf, bool doCharge, bool doCos);
     std::vector<wbPDF*> Reading_external_pdfs(TString pdf_filename);
     void SetPDFs(wbPDF* pdf) {_pdf = pdf;}
     void SetPDFs(std::vector<wbPDF*> pdf) {_pmtpdf = pdf;}
+    void SetPDFS(std::vector<std::vector<wbPDF*>> pdfs) {_pmtpdfs = pdfs;}
+    void SetDirPDFs(std::vector<wbPDF*> pdf) {_dirpdf = pdf;}
+    std::vector<wbPDF*> GetDirPDFs() {return _dirpdf;}
     std::vector<wbPDF*> GetPMTPDFs() {return _pmtpdf;}
+    std::vector<std::vector<wbPDF*>> GetPMTPDFS() {return _pmtpdfs;}
 
     std::vector<wbEvent::wbHit> SetEvent(std::vector<std::vector<double> > list){
       std::vector<wbEvent::wbHit> event;
@@ -186,17 +196,27 @@ using namespace RooFit;
     TVectorD* pullUnc;
     wbPDF* _wbpdf;
     int _nbins;
+    int _ndir;
+    int _nbin_pmt;
+    int _nbin_time;
     bool _do2dpdf;
     bool _doCharge;
     bool _doCos;
     bool _ifScan;
     bool _fitVertex;
     bool _perPMT;
+    bool _perDir;
+    bool _do3D;
+    int _hitNumLimit;
     void SetIfDo2dpdf (bool aaa) { _do2dpdf = aaa;}
     void SetIfDoCharge (bool aaa) { _doCharge = aaa;}
     void SetIfDoCos (bool aaa) { _doCos = aaa;}
     void SetNbins (int nbins) {_nbins = nbins;}
+    void SetNbins_time (int nbins) {_nbin_time = nbins;}
+    void SetNbins_pmt (int nbins) {_nbin_pmt = nbins;}
+    void SetNdir (int nbins) {_ndir = nbins;}
     void SetPerPMT (bool aaa) {_perPMT = aaa;}
+    void SetPerDir (bool aaa) {_perDir = aaa;}
     void ifScan (bool aaa) {_ifScan = aaa;} 
 
     Double_t _x;
@@ -210,14 +230,20 @@ using namespace RooFit;
     std::vector<double> _vertex;
     wbPDF* _pdf ;
     std::vector<wbPDF*> _pmtpdf;
+    std::vector<wbPDF*> _dirpdf;
+    std::vector<std::vector<wbPDF*>> _pmtpdfs;
     double _promptCut;
     std::vector<double> _promptCutList;
+    Double_t _timeInterval;
 
     void SetVertex(double x, double y, double z){ _x = x; _y = y; _z = z;}
     void SetDetectorSize (double detR, double detZ) { _detR = detR; _detZ = detZ;}
     void SetPMTList (std::vector<std::vector<double> > pmtList) {_pmtList = pmtList;}
     void SetAddTime (bool addtime) {_addTime = addtime;}
     void SetFitVertex (bool fitvertex) {_fitVertex = fitvertex;}
+    void SetTimeInterval(double timeInterval) {_timeInterval = timeInterval;}
+    void SetDo3D(bool do3d) {_do3D = do3d;}
+    void SetHitNumLimit (int hitnum) {_hitNumLimit = hitnum;}
 
     std::vector<double> GetVertex() { std::vector<double> pmt; pmt.push_back(_x); pmt.push_back(_y); pmt.push_back(_z); return pmt; }    
     std::vector<double> GetDetectorSize() {std::vector<double> detSize; detSize.push_back(_detR); detSize.push_back(_detZ); return detSize;}

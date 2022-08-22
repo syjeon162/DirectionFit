@@ -48,13 +48,20 @@ double zlowercut = 1e6;
 bool perPMT = false;
 int evtBase = 0;
 bool externalPDF = false;
+bool do3D = false;
+bool perDir = false;
+double timeInterval = 0.5;
+double uppertime = 5;
+int hitNumLimit = 1e6;
+int npmt_bin = 252; 
+int ntime_bin = 30;
+int ndir_bin = 400;
+double timeCorrection = 0;
 
 void parseArguments(int argc, char**argv)
 {
-  //cout<<"inside parse"<<endl;
   for (int iarg=0; iarg<argc; iarg++)
   {
-    //cout<<iarg<<endl;
     if (string( argv[iarg])=="-h" || string( argv[iarg])=="--help" )
     {
       cout << "**************************************" << endl;
@@ -85,8 +92,6 @@ void parseArguments(int argc, char**argv)
       cout << "   --nbins           Number of bins in PDF "<<endl;
       cout << "   --zlowercut       Z hit location lower cut? Ignore if don't want such a cut" <<endl;
       cout << "   --firVertex       Fitting vertex at the same time?" <<endl;
-      cout << "   --perPMT          Doing perPMT PDF?" <<endl;
-      cout << "   --externalPDF     Insering an external pre-calculated PDF, needed for perPMT case!" <<endl;
       cout << "**************************************" << endl;
       exit(0);
     }
@@ -244,7 +249,51 @@ void parseArguments(int argc, char**argv)
       iarg++;
       pdf_filename = argv[iarg];
     }
+    else if (string( argv[iarg])=="--do3D" )
+    {
+      do3D = true;
+    }
+    else if (string( argv[iarg])=="--perDir" )
+    {
+      perDir = true;
+    }    
+    else if (string( argv[iarg])=="--timeInterval" )
+    {
+      iarg++;
+      timeInterval = atof(argv[iarg]);
+    }
+
+    else if (string( argv[iarg])=="--uppertime" )
+    {
+      iarg++;
+      uppertime = atof(argv[iarg]);
+    }
     
+    else if (string( argv[iarg])=="--hitNumLimit" )
+    {
+      iarg++;
+      hitNumLimit = atoi(argv[iarg]);
+    }
+    else if (string( argv[iarg])=="--npmt" )
+    {
+      iarg++;
+      npmt_bin = atoi(argv[iarg]);
+    }    
+    else if (string( argv[iarg])=="--ntime" )
+    {
+      iarg++;
+      ntime_bin = atoi(argv[iarg]);
+    }
+    else if (string( argv[iarg])=="--ndir" )
+    {
+      iarg++;
+      ndir_bin = atoi(argv[iarg]);
+    }
+    else if (string( argv[iarg])=="--timeCorrection" )
+    {
+      iarg++;
+      timeCorrection = atof(argv[iarg]);
+    }
   }
 }
 
@@ -255,6 +304,17 @@ int main(int argc, char**argv){
   cout<<"intput and output txt : "<<inputTxt.Data()<<" "<<outputTxt.Data()<<endl;
   if (ifOutputRoot) cout<<"output root file : "<<outputRoot.Data()<<endl;
   cout<<"pmt location and detector mass : "<<pmtLocation.Data()<<" "<<detMass<<endl;
+
+  TH3F* h3 = new TH3F("","", 100,-1200,1200, 100, -1200,1200,100,-1200,1200);
+  TH3F* h4 = new TH3F("","", 100,-1200,1200, 100, -1200,1200,100,-1200,1200);
+
+  TH1F* hc = new TH1F("","",50,0,50);  
+  TH1F* hhx[1000];
+  TH1F* hhz[1000];
+  for (int i=0;i<1000;i++){
+    hhx[i] = new TH1F("","",20,0,1);
+    hhz[i] = new TH1F("","",20,-1200,1200);
+  }
 
   ifstream in;
   in.open(pmtLocation.Data());
@@ -278,12 +338,6 @@ int main(int argc, char**argv){
 
   if (ifOutputRoot){
     outfile = TFile::Open( outputRoot.Data(), "recreate");
-    tree.Branch("trueDir",&trueDir,"trueDir[3]/D");
-    tree.Branch("recoDir",&recoDir,"recoDir[3]/D");
-    tree.Branch("nPMT",&nPMT,"nPMT/I");
-    tree.Branch("PMTid",&PMTid,"PMTid[264][3]/D");
-    tree.Branch("PMTtime",&PMTtime,"PMTtime[264]/D");
-    tree.Branch("PMTangle",&PMTangle,"PMTangle[264]/D");
   }
 
   std::vector<std::vector<double> > pmtlist;
@@ -306,27 +360,42 @@ int main(int argc, char**argv){
   int eventTaker[10000] = {};
   int hitNumber[300][30] = {};
 
+  TH1F* h_times = new TH1F("","",100,-5,5);
+  TH1F* h_timec = new TH1F("","",100,-5,5);
+  TH1F* h_pmtzs = new TH1F("","",30,-1500,1500);
+  TH1F* h_pmtzc = new TH1F("","",30,-1500,1500);
+
   if (digitize && branchSelection == 0 ){
     cout<<"  --- be careful! You can't do digitization and true branch at the same time !! ---"<<endl;
     exit(0);
   }
 
+  int count_top = 0;
+  int count_side = 0;
+  int count_bot = 0;
   while (!in2.eof() ){
-    // event id, pmt id, time, light category  
-    in2>>aaa>>bbb>>ccc>>ddd>>eee>>fff;
-    cout<<aaa<<endl;
-    if (bbb == -999){
-      ggg[aaa] = ddd;
-      hhh[aaa] = eee;
-      mmm[aaa] = fff;
-      continue;
-    }
+      in2>>aaa>>bbb>>ccc>>ddd>>eee>>fff;
+      if (bbb == -999){
+        ggg[aaa] = ddd;
+	hhh[aaa] = eee;
+	mmm[aaa] = fff;
+	continue;
+      }
 
     double pmtxloc; double pmtyloc;
     pmtxloc = pmtx[bbb];
     pmtyloc = pmty[bbb];
 
-    ccc = ccc - (sqrt((pmtxloc-trueOriginX)*(pmtxloc-trueOriginX)+(pmtyloc-trueOriginY)*(pmtyloc-trueOriginY) + (pmtz[bbb]-trueOriginZ)*(pmtz[bbb]-trueOriginZ))/200.);
+    ccc = ccc - (sqrt((pmtxloc-trueOriginX)*(pmtxloc-trueOriginX)+(pmtyloc-trueOriginY)*(pmtyloc-trueOriginY) + (pmtz[bbb]-trueOriginZ)*(pmtz[bbb]-trueOriginZ))/200.) + timeCorrection;
+    if (ddd == 0 ){
+      h_timec->Fill(ccc);
+      h_pmtzc->Fill(pmtz[bbb]);
+    }
+    else {
+      h_times->Fill(ccc);
+      h_pmtzs->Fill(pmtz[bbb]);    
+    }
+
     if(aaa > evtNum || aaa< evtBase) continue;
     if (true_light && ddd != 0) continue;
     if (eee != branchSelection ) continue;
@@ -364,12 +433,11 @@ int main(int argc, char**argv){
     
        double doingNothing = 1;
     }
-    // hacking finishes..
 
     std::vector<double> pmtloc;
     pmtloc.push_back(pmtxloc);
     pmtloc.push_back(pmtyloc);
-    if (!perPMT)
+    if (!perPMT && !perDir)
       pmtloc.push_back(pmtz[bbb]);
     else
       pmtloc.push_back(bbb);
@@ -388,7 +456,7 @@ int main(int argc, char**argv){
     // for direction (0,1,0) theta = TMath::Pi()/2.; phi =  TMath::Pi()/2.;
     // for direction (0,0,-1) theta = TMath::Pi(); phi = 0;
     if (orient == 999) {
-      cout<<"setting isotropic PDF .. "<<endl;
+      //cout<<"setting isotropic PDF .. "<<endl;
       pmtloc.push_back(0); 
       if (mmm[aaa]>0){
         pmtloc.push_back(TMath::ATan(sqrt(ggg[aaa]*ggg[aaa]+hhh[aaa]*hhh[aaa])/abs(mmm[aaa]))); 
@@ -411,7 +479,7 @@ int main(int argc, char**argv){
     pmtloc.push_back(fff);
 
     pmtlist.push_back(pmtloc);
-    if (aaa>= lowerEvt && aaa< upperEvt ){
+    if (aaa>= lowerEvt && aaa< upperEvt ){//&& eee == 1){
     if (theta > -999){
       fitlist[aaa].push_back(pmtloc);
       cout<<"pmt id "<<pmtloc.at(2)<<endl;
@@ -431,21 +499,17 @@ int main(int argc, char**argv){
   char formula[10];
   dirFit * rep = new dirFit ("_rep");
   
-  // 1 ton time cut 4.5, 2.4 ton time cut 5.5, 5 ton time cut 6.5 -> Obselete
+  // 1 ton time cut 4.5, 2.4 ton time cut 5.5, 5 ton time cut 6.5
   cout<<"doing digitize ? "<<digitize<<"  adding sometime ? "<<sometime<<endl;
 
   if (!digitize){
     if (detMass == 1)
-      //rep->SetPromptCut(4.5+sometime);
       rep->SetPromptCut(4.5+sometime/10.);
-      //rep->SetPromptCut(5.5);
     if (detMass == 2)
       rep->SetPromptCut(5.5+sometime/10.);
     if (detMass == 3)
       rep->SetPromptCut(6+sometime/10.);
     if (detMass == 5 || detMass == 4)
-      //rep->SetPromptCut(6.5+sometime);
-      //rep->SetPromptCut(6.5+sometime/10.);
       rep->SetPromptCut(sometime);  
   }
   else{
@@ -457,11 +521,15 @@ int main(int argc, char**argv){
   rep->SetIfDoCharge(doCos);
   rep->SetFitVertex(doFitVertex);
   rep->SetIfDo2dpdf(false);
+  rep->SetDo3D(do3D);
   if (do2Dpdf) rep->SetIfDo2dpdf(true);
   if (perPMT) rep->SetPerPMT(true);
   else rep->SetPerPMT(false);
-  //if (all_light)
-    //rep->SetPromptCut(10);
+  if (perDir) rep->SetPerDir(true);
+  else rep->SetPerDir(false);
+
+  if (!perDir)
+    ntime_bin = uppertime/timeInterval;
 
   cout<<"reading processing events"<<endl;
   std::vector<double> iniVertex(3);
@@ -470,13 +538,30 @@ int main(int argc, char**argv){
   std::vector<wbPDF*> pdfss(500);
   for (int ipmt = 0; ipmt< 500;ipmt++){
     pdfss[ipmt] = new wbPDF("_wbpdf");
-    pdfss[ipmt]->SetPMTPDFBinning(nbins,0,3.14,nbins,0,6.28);
+    if (!perDir)  pdfss[ipmt]->SetPMTPDFBinning(nbins,0,3.14,nbins,0,6.28);
+    else pdfss[ipmt]->SetDirPDFBinning(npmt_bin,0,npmt_bin,ntime_bin,-2,4);
   }
+  cout<<"constructing 3D structure .. "<<endl;
+  std::vector<std::vector<wbPDF*>> pdfsss(ntime_bin, std::vector<wbPDF*>(npmt_bin));
+  if (perPMT && do3D && !perDir){
+    for (int itime = 0; itime< pdfsss.size(); itime++){
+      for (int ipmt = 0; ipmt< pdfsss[itime].size(); ipmt++){
+        cout<<"time slice and pmt id "<<itime<<" "<<ipmt<<endl;
+        pdfsss[itime][ipmt] = new wbPDF("_wbpdf");
+        pdfsss[itime][ipmt]->SetPMTPDFBinning(nbins,0,3.14,nbins,0,6.28);
+      }
+    }
+  }
+
+  cout<<"extracting pdfs .. "<<endl;
+
   TH1F* timepdf;
   TH1F* thetapdf;
   TH2F* timeThetapdf;
   TH2F* pmtpdf[500];
-  if (!perPMT){
+  TH2F* pmtpdff[100][500];
+  TH2F* dirpdf[500];
+  if (!perPMT && !perDir){
     pdfs =  rep->Reading_Processing_Events(pmtlist,"pdf", iniVertex, do2Dpdf, doCharge, doCos );
     rep->SetPDFs(pdfs);
     cout<<"getting pdfs"<<endl;
@@ -485,27 +570,99 @@ int main(int argc, char**argv){
     timeThetapdf = pdfs->GetTimeThetaPDF();
     cout<<"pdf obtained"<<endl;
   }
+  else if(perDir){
+    cout<<"reading perPMT PDFs .. "<<endl;
+    rep->SetNbins_time(ntime_bin);
+    rep->SetNdir(ndir_bin);
+    rep->SetNbins_pmt(npmt_bin);
+    if (!externalPDF){
+      cout<<"doing a perDir pdf generation.."<<endl;
+      pdfss = rep->Reading_Processing_Events_PerDir(pmtlist,"dirpdf", iniVertex, do2Dpdf, doCharge, doCos );
+      cout<<"checking pdfss, size, and size of individual pdfss element:  "<<pdfss.size()<<" "<<pdfss[1]->GetDirPDF()->GetNbinsX()<<" "<<pdfss[1]->GetDirPDF()->GetNbinsY()<<endl;
+      for (int iii=0;iii<pdfss[1]->GetDirPDF()->GetNbinsX(); iii++){
+        for (int jjj=0;jjj<pdfss[1]->GetDirPDF()->GetNbinsY(); jjj++){
+	   if (pdfss[368]->GetDirPDF()->GetBinContent(iii+1,jjj+1)>0) cout<<"in app2 iii, jjj, pdfss[1] element: "<<iii<<" "<<jjj<<" "<<pdfss[368]->GetDirPDF()->GetBinContent(iii+1,jjj+1)<<endl;
+        }
+      }
+    }
+    else{
+        TFile fepdf(pdf_filename.Data());
+        for (int iir=0;iir<ndir_bin;iir++){
+          TH2F* hpdf = (TH2F*)fepdf.Get(Form("output_dir_%d",iir));
+	  //if (iir == 1) cout<<"ckecking set dir "<<hpdf->Integral()<<endl;
+          pdfss[iir]->SetDirPDF(hpdf);
+	  //if (iir == 1) cout<<"pdfss integral "<<pdfss[1]->GetDirPDF()->Integral()<<endl;
+        }
+        fepdf.Close();
+	rep->SetDirPDFs(pdfss);
+	//cout<<"testing here (dir 1 integral) "<<rep->GetDirPDFs().at(1)->GetDirPDF()->Integral()<<endl;
+    }
+    if (ifOutputRoot){
+      for (int ipmt = 0; ipmt<pdfss.size() ; ipmt++){
+        if (perDir){
+          dirpdf[ipmt] = pdfss[ipmt]->GetDirPDF();
+          dirpdf[ipmt]->Write(Form("output_dir_%d",ipmt));
+        }
+      }
+    }
+  } 
   else{
     cout<<"reading perPMT PDFs .. "<<endl;
-    if (!externalPDF)
-      pdfss = rep->Reading_Processing_Events_PerPMT(pmtlist,"pmtpdf", iniVertex, do2Dpdf, doCharge, doCos );
-    else{
-      TFile fepdf(pdf_filename.Data());
-      for (int iir=0;iir<500;iir++){
-        TH2F* hpdf = (TH2F*)fepdf.Get(Form("output_%d",iir));
-        pdfss[iir]->SetPMTPDF(hpdf);
+    if (!externalPDF){
+      if (!do3D){
+        pdfss = rep->Reading_Processing_Events_PerPMT(pmtlist,"pmtpdf", iniVertex, do2Dpdf, doCharge, doCos );
+      } 
+      else{
+	cout<<"doing a 3D pdf generation.."<<endl;
+        rep->SetTimeInterval(timeInterval);
+	pdfsss = rep->Reading_Processing_Events_PerPMT_timeSlice(pmtlist,"pmtpdf", iniVertex, do2Dpdf, doCharge, doCos, uppertime );
       }
-      fepdf.Close();
+    }
+    else{
+      if (!do3D){
+        TFile fepdf(pdf_filename.Data());
+        for (int iir=0;iir<npmt_bin;iir++){
+          TH2F* hpdf = (TH2F*)fepdf.Get(Form("output_%d",iir));
+          pdfss[iir]->SetPMTPDF(hpdf);
+        }
+        fepdf.Close();
+      }
+      else {
+	rep->SetTimeInterval(timeInterval);      
+        TFile fepdf(pdf_filename.Data());
+        for (int iir=0;iir<npmt_bin;iir++){
+	  for (int iit =0; iit< ntime_bin; iit++){
+            TH2F* hpdf = (TH2F*)fepdf.Get(Form("output_%d_timeSlice_%d",iir,iit));
+            pdfsss[iit][iir]->SetPMTPDF(hpdf);
+	  }
+        }
+        fepdf.Close();      
+      }
     }	
-    rep->SetPDFs(pdfss);
+    if (!do3D && !perDir) rep->SetPDFs(pdfss);
+    else rep->SetPDFS(pdfsss);
+    std::vector<std::vector<wbPDF*>> set_pdfs = rep->GetPMTPDFS();
+    cout<<"checking the setup pmt pdf info. "<<set_pdfs[0][0]->GetPMTPDF()->GetNbinsX()<<endl;
     cout<<"getting pmt pdfs"<<endl;
     for (int ipmt = 0; ipmt<pdfss.size() ; ipmt++){
-      pmtpdf[ipmt] = pdfss[ipmt]->GetPMTPDF();
-      if (ifOutputRoot){ pmtpdf[ipmt]->Write(Form("output_%d",ipmt)); }
+      if (ifOutputRoot && !do3D && !perDir){ 
+	pmtpdf[ipmt] = pdfss[ipmt]->GetPMTPDF();
+	pmtpdf[ipmt]->Write(Form("output_%d",ipmt)); 
+      }
+      if (ifOutputRoot && do3D && !perDir){ 
+	for (int itime= 0; itime< pdfsss.size();itime++){
+	  pmtpdff[itime][ipmt] = pdfsss[itime][ipmt]->GetPMTPDF();
+	  pmtpdff[itime][ipmt]->Write(Form("output_%d_timeSlice_%d",ipmt,itime)); 
+  	}
+      }
     }
     cout<<"pmt pdf obtained"<<endl;
   }
   if (ifOutputRoot){
+    h_times->Write("h_times");
+    h_pmtzs->Write("h_pmtzs");
+    h_timec->Write("h_timec");
+    h_pmtzc->Write("h_pmtzc");
     outfile->Write();
   }
 
@@ -538,9 +695,12 @@ int main(int argc, char**argv){
       rep->getParVar(2)->setVal(-1);
       rep->getParVar(2)->setConstant(true);
     }
+    rep->SetHitNumLimit(hitNumLimit);
+    if (hitNumLimit < 1e5) {cout<<"--------------------- setting hit number limit !!! "<<endl; }
 
     cout<<4<<endl;
-
+    ofstream out;
+    out.open(outputTxt.Data(), std::ofstream::out | std::ofstream::app);
     cout<<"setting function"<<endl;
     double bestFit=1e9;
     double currX=1e9;
@@ -556,6 +716,9 @@ int main(int argc, char**argv){
           rep->getParVar(1)->setConstant(true);
           double res = rep->evaluate();
 
+          //cout<<"currX currY "<<xloop/50.-4<<" "<<yloop/50.-4<<"  res "<<res<<endl;
+	  cout<<aaa<<" "<<xloop<<" "<<yloop<<" "<<res<<endl;
+	  out<<aaa<<" "<<xloop<<" "<<yloop<<" "<<res<<endl;
           if (res < currRes) {
             currRes = res;
             currX = xloop;
@@ -572,10 +735,8 @@ int main(int argc, char**argv){
       Double_t callsEDM[2] = {10500., 1.e-6};
       Int_t irf = 0;
 
-      cout<<"ready to perform the fit with MINUIT"<<endl;
       gMinuit->mnexcm("MIGRAD",callsEDM,2,irf);
       m.migrad();
-      //m.hesse();
       res = m.save();
       double bestFit = res->minNll();
       std::cout<<"fit status code is : "<< res->status()<<std::endl;
@@ -609,10 +770,12 @@ int main(int argc, char**argv){
     if (!doScan){
       if (abs(bestFit) > 0 && abs(rep->getParVar(0)->getVal())>0 ){
         cout<<"directional vector and bestFit: "<<currX<<" "<<currY<<" "<<currZ<<" "<<bestFit<<endl;
+        out<<currX<<" "<<currY<<" "<<currZ<<" "<<bestFit<<endl;
       }
     }
     else{
         cout<<"directional vector and bestFit: "<<currX<<" "<<currY<<" "<<currZ<<" "<<bestFit<<"   angle between true and reco. "<<endl;
+        out<<currX<<" "<<currY<<" "<<currZ<<" "<<bestFit<<endl;
     }
   }
   if (ifOutputRoot){
