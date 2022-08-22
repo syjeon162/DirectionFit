@@ -17,10 +17,15 @@ If you keep --scanning, it will do a scan to find the minimum, otherwise remove 
 
 ```./app2 -i ${INPUT_FILE} -o ${OUTPUT_SCAN} -m ${MASS} -p pmtlocation_4ton_index_${BOTTOM_CASE}.txt -r t ${OUTPUT_ROOT} --evtBase 0 -n 10000 -s 0 --sometime 2 --upper ${UPPER} --lower 0 --orient 999 -b 1 --nbins 20 --originX 0 --originY 0 --originZ ${ZLOCATION} --npmt ${NPMT} --ndir 400 --ntime 30 --perDir --timeCorrection ${TIMECORR}```
 Running this will give you pdf
+
 if you specify
 --externalPDF ${EXTERNALPDF}
+
 to make it like
-```./app2 -i ${INPUT} -o ${OUTPUT} -m 4 -p pmtlocation_4ton_index_${BOTTOM_CASE}.txt --evtBase 0 -n 10000 -s 0 --sometime 2 --upper ${upper} --lower ${lower} --orient 999 -b 1 --nbins 20 --originX 0 --originY 0 --originZ ${ZLOCATION} --npmt ${NPMT} --ndir 420 --ntime 30 --perPMT --perDir --externalPDF ${EXTERNAL_PDF} --scanning ```
+
+```./app2 -i ${INPUT} -o ${OUTPUT} -m 4 -p pmtlocation_4ton_index_${BOTTOM_CASE}.txt --evtBase 0 -n 10000 -s 0 --sometime 2 --upper ${upper} --lower ${lower} --orient 999 -b 1 --nbins 20 --originX 0 --originY 0 --originZ ${ZLOCATION} --npmt ${NPMT} --ndir 420 --ntime 30 --perPMT --perDir --externalPDF 
+${EXTERNAL_PDF} --scanning ```
+
 then it will load the pre-obtained pdfs. If you don't specify externalPDF, it will only generate pdf and exit, otherwise it will perform the likelihood scanning. 
 
 NPMT, BOTTOM_CASE, MASS, UPPER, ZLOCATION, TIMECORR all depend on the geoemtry
