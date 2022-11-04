@@ -14,7 +14,10 @@ For a lot of features now, you need to ask me why they are there.
 
 An example to run:
 ```$make
-$./app2 -i example_fit.txt -m 4 -p pmtlocation_4ton_index_17.txt --evtBase 0 -n 1 -s 0 --sometime 0.2 --upper 1 --lower 0 --orient 999 -b 0 --trueLight --perPMT --nbins 20 --originX 0 --originY 0 --originZ -500 --scanning --externalPDF example_water_perPMT_PDF.root```
+$./app2 -i example_fit.txt -m 4 -p pmtlocation_4ton_index_17.txt --evtBase 0 -n 1 -s 0 
+--sometime 0.2 --upper 1 --lower 0 --orient 999 -b 0 --trueLight --perPMT --nbins 20 
+--originX 0 --originY 0 --originZ -500 --scanning --externalPDF example_water_perPMT_PDF.root
+```
 
 It will take the extrenal PDF example_water_perPMT_PDF.root, doing per PMT PDF, setting vertex (0,0,-500), taking true light from the file, taking two events.
 If you keep --scanning, it will do a scan to find the minimum, otherwise remove it, it will run with Minuit.
