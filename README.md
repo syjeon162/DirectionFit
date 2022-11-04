@@ -3,6 +3,10 @@ There are two kinds of PDF methods : per PMT PDF and universal angle-time PDF.
 The input is pre-calculated information in a text file. The reasoning is to remove the ratpac dependency.
 An example file is included.
 
+The bare minimum information needed are: 
+ - for the pdf generation: sample txt files and the pmt information file
+ - for the fitting: pdf files, sample txt files and the pmt information file
+
 For the formal one, per-calculated PDF will be needed. That calculation can be done with the same tool with the option --perPMT without --externalPDF.
 After that's done, both --perPMT and --externalPDF together will activate the reading of external PDFs.
 
