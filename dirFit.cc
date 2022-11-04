@@ -140,7 +140,7 @@ std::vector<wbPDF*> dirFit::Reading_Processing_Events_PerDir(std::vector<std::ve
     std::vector<wbEvent::wbHit> list =  _wbEvent.sample_photons(_wbEvent.GetHitList());
     cout<<"creating pdfs"<<endl;
     //if (twoDpdf) return _wbEvent.create2DPDFs(list, _promptCut, 100, doCharge, doCos, _nbins);
-    std::vector<wbPDF*> backing = _wbEvent.createDirPDFs(list, -2, 4, 100, doCharge, doCos, _nbin_pmt, _nbin_time);
+    std::vector<wbPDF*> backing = _wbEvent.createDirPDFs(list, -10, 10, 100, doCharge, doCos, _nbin_pmt, _nbin_time);
     return backing;
   }
 }
@@ -362,7 +362,7 @@ Double_t dirFit::calDirLikelihood( RooListProxy* _pulls, std::vector<wbEvent::wb
     if (i.t > _promptCut) continue;
     int pmtid = i.pmtid;
     int hdir = 20*((int)(phi)) + (int)(theta) ;
-    int itime = (i.t+2)/0.2;
+    int itime = (i.t+10)/0.2;
 
     //cout<<"hdir, itime and pmt id : "<<hdir<<" "<<itime<<" "<<pmtid<<endl;
     TH2F* h1 = pdf[hdir]->GetDirPDF();
@@ -371,15 +371,18 @@ Double_t dirFit::calDirLikelihood( RooListProxy* _pulls, std::vector<wbEvent::wb
     h1->Scale(200./h1->Integral());
     TGraph2D pdf_pmt(h1);
 
+    double user_weight = 1;
+    if (pmtid>=192) user_weight = 0;
+
     double currll;
     double temp;
     if (_ifScan){
-      if (doCharge) { temp = h1->GetBinContent( (int)(pmtid)+1, (int)(itime)+1)* i.charge ;}
-      else {temp = h1->GetBinContent(  (int)(pmtid)+1, (int)(itime)+1 ) ;}
+      if (doCharge) { temp = h1->GetBinContent( (int)(pmtid)+1, (int)(itime)+1)* i.charge * user_weight ;}
+      else {temp = h1->GetBinContent(  (int)(pmtid)+1, (int)(itime)+1, user_weight ) ;}
     }
     else {
-      if (doCharge) { temp = h1->GetBinContent( (int)(pmtid)+1, (int)(itime)+1)* i.charge ;}
-      else {temp = h1->GetBinContent(  (int)(pmtid)+1, (int)(itime)+1 ) ;}
+      if (doCharge) { temp = h1->GetBinContent( (int)(pmtid)+1, (int)(itime)+1)* i.charge * user_weight ;}
+      else {temp = h1->GetBinContent(  (int)(pmtid)+1, (int)(itime)+1, user_weight ) ;}
     }
 
     if (temp< 1e-3 || temp> 1e2 || temp< 1e-3 || temp> 1e2) currll = 1e-3;

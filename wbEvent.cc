@@ -293,7 +293,7 @@ std::vector<wbPDF*> wbEvent::createDirPDFs(std::vector<wbHit> list, double time1
   std::vector<wbPDF*> wbpdf(500);
   for (int idir = 0; idir< 500;idir++){
     wbpdf[idir] = new wbPDF("_wbpdf");
-    wbpdf[idir]->SetDirPDFBinning(nbin_pmt,0,nbin_pmt,nbin_time,-2,4);
+    wbpdf[idir]->SetDirPDFBinning(nbin_pmt,0,nbin_pmt,nbin_time,-10,10);
   }
   cout<<"creating pdf in dirPDF.. total wbhit number "<<list.size()<<endl;
   for (wbHit i: list){

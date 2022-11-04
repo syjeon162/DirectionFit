@@ -33,6 +33,7 @@ bool true_light = false;
 float vertexSmear = 0;
 int scinPct = 0;
 bool digitize = false;
+bool oTxt = true;
 float sometime = 0;
 bool do2Dpdf = false;
 bool doCharge = false;
@@ -56,12 +57,14 @@ int hitNumLimit = 1e6;
 int npmt_bin = 252; 
 int ntime_bin = 30;
 int ndir_bin = 400;
-double timeCorrection = 0;
+float timeCorrection = 0;
 
 void parseArguments(int argc, char**argv)
 {
+  //cout<<"inside parse"<<endl;
   for (int iarg=0; iarg<argc; iarg++)
   {
+    //cout<<iarg<<endl;
     if (string( argv[iarg])=="-h" || string( argv[iarg])=="--help" )
     {
       cout << "**************************************" << endl;
@@ -91,7 +94,18 @@ void parseArguments(int argc, char**argv)
       cout << "   --specialConfig   Special configuration? Any numbers not 1-4 means no special config." <<endl;
       cout << "   --nbins           Number of bins in PDF "<<endl;
       cout << "   --zlowercut       Z hit location lower cut? Ignore if don't want such a cut" <<endl;
-      cout << "   --firVertex       Fitting vertex at the same time?" <<endl;
+      cout << "   --fitVertex       Fitting vertex at the same time?" <<endl;
+      cout << "   --perPMT          Run per-PMT likelihood?" <<endl;
+      cout << "   --externalPDF     Input PDF for fitting" <<endl;
+      cout << "   --do3D            Do we want time slice? Always set this!" <<endl;
+      cout << "   --perDir          Per-direction fit? This is the best so far." <<endl;
+      cout << "   --timeInterval    What is the time step?" <<endl;
+      cout << "   --uppertime       Upper limit for the residual time?" <<endl;
+      cout << "   --hitNumLimit     Upper limit for the number of hits" <<endl;
+      cout << "   --npmt            How many pmts in the detector? " <<endl;
+      cout << "   --ntime           Number of bins for the time dimension" <<endl;
+      cout << "   --ndir            Number of direction options" <<endl;
+      cout << "   --timeCorrection     Time correction for all the residual time" <<endl;
       cout << "**************************************" << endl;
       exit(0);
     }
@@ -119,6 +133,7 @@ void parseArguments(int argc, char**argv)
     else if (string( argv[iarg])=="-o" || string( argv[iarg])=="--outTxt" )
     {
       iarg++;
+      oTxt = true;
       outputTxt = argv[iarg];
     }
     else if (string( argv[iarg])=="-r" || string( argv[iarg])=="--outRoot" )
@@ -299,6 +314,7 @@ void parseArguments(int argc, char**argv)
 
 
 int main(int argc, char**argv){
+//int main(){
 
   parseArguments( argc, argv);
   cout<<"intput and output txt : "<<inputTxt.Data()<<" "<<outputTxt.Data()<<endl;
@@ -338,6 +354,12 @@ int main(int argc, char**argv){
 
   if (ifOutputRoot){
     outfile = TFile::Open( outputRoot.Data(), "recreate");
+    tree.Branch("trueDir",&trueDir,"trueDir[3]/D");
+    tree.Branch("recoDir",&recoDir,"recoDir[3]/D");
+    tree.Branch("nPMT",&nPMT,"nPMT/I");
+    tree.Branch("PMTid",&PMTid,"PMTid[264][3]/D");
+    tree.Branch("PMTtime",&PMTtime,"PMTtime[264]/D");
+    tree.Branch("PMTangle",&PMTangle,"PMTangle[264]/D");
   }
 
   std::vector<std::vector<double> > pmtlist;
@@ -433,7 +455,7 @@ int main(int argc, char**argv){
     
        double doingNothing = 1;
     }
-
+    // event branch eee == 1;  mc branch eee == 0
     std::vector<double> pmtloc;
     pmtloc.push_back(pmtxloc);
     pmtloc.push_back(pmtyloc);
@@ -456,7 +478,6 @@ int main(int argc, char**argv){
     // for direction (0,1,0) theta = TMath::Pi()/2.; phi =  TMath::Pi()/2.;
     // for direction (0,0,-1) theta = TMath::Pi(); phi = 0;
     if (orient == 999) {
-      //cout<<"setting isotropic PDF .. "<<endl;
       pmtloc.push_back(0); 
       if (mmm[aaa]>0){
         pmtloc.push_back(TMath::ATan(sqrt(ggg[aaa]*ggg[aaa]+hhh[aaa]*hhh[aaa])/abs(mmm[aaa]))); 
@@ -470,7 +491,6 @@ int main(int argc, char**argv){
       else if (ggg[aaa]<0 && hhh[aaa]>=0) {pmtloc.push_back(TMath::ATan(hhh[aaa]/ggg[aaa])+TMath::Pi()); phi = TMath::ATan(hhh[aaa]/ggg[aaa])+TMath::Pi();}
       else if (ggg[aaa]<0 && hhh[aaa]<0) {pmtloc.push_back(TMath::ATan(hhh[aaa]/ggg[aaa])+ TMath::Pi()); phi = TMath::ATan(hhh[aaa]/ggg[aaa])+ TMath::Pi();}
       else if (ggg[aaa]>=0 && hhh[aaa]<=0) {pmtloc.push_back(TMath::Pi()*2 -TMath::ATan(abs(hhh[aaa])/ggg[aaa])); phi = TMath::Pi()*2 -TMath::ATan(abs(hhh[aaa])/ggg[aaa]); }
-      //cout<<"particle trajectory "<<" id "<<aaa<<" direction "<<ggg[aaa]<<" "<<hhh[aaa]<<" "<<mmm[aaa]<<" "<<" theta "<<theta <<" phi "<<phi<<endl;
     }
     else if (orient == 1) {pmtloc.push_back(0); pmtloc.push_back(TMath::Pi()/2.); pmtloc.push_back(TMath::Pi()/2.);}
     else if (orient == 2) {pmtloc.push_back(0); pmtloc.push_back(TMath::Pi()/2.); pmtloc.push_back(0);}
@@ -504,12 +524,16 @@ int main(int argc, char**argv){
 
   if (!digitize){
     if (detMass == 1)
+      //rep->SetPromptCut(4.5+sometime);
       rep->SetPromptCut(4.5+sometime/10.);
+      //rep->SetPromptCut(5.5);
     if (detMass == 2)
       rep->SetPromptCut(5.5+sometime/10.);
     if (detMass == 3)
       rep->SetPromptCut(6+sometime/10.);
     if (detMass == 5 || detMass == 4)
+      //rep->SetPromptCut(6.5+sometime);
+      //rep->SetPromptCut(6.5+sometime/10.);
       rep->SetPromptCut(sometime);  
   }
   else{
@@ -534,12 +558,11 @@ int main(int argc, char**argv){
   cout<<"reading processing events"<<endl;
   std::vector<double> iniVertex(3);
   wbPDF* pdfs;
-  //std::vector<wbPDF*> pdfss;
   std::vector<wbPDF*> pdfss(500);
   for (int ipmt = 0; ipmt< 500;ipmt++){
     pdfss[ipmt] = new wbPDF("_wbpdf");
     if (!perDir)  pdfss[ipmt]->SetPMTPDFBinning(nbins,0,3.14,nbins,0,6.28);
-    else pdfss[ipmt]->SetDirPDFBinning(npmt_bin,0,npmt_bin,ntime_bin,-2,4);
+    else pdfss[ipmt]->SetDirPDFBinning(npmt_bin,0,npmt_bin,ntime_bin,-10,10);
   }
   cout<<"constructing 3D structure .. "<<endl;
   std::vector<std::vector<wbPDF*>> pdfsss(ntime_bin, std::vector<wbPDF*>(npmt_bin));
@@ -589,13 +612,10 @@ int main(int argc, char**argv){
         TFile fepdf(pdf_filename.Data());
         for (int iir=0;iir<ndir_bin;iir++){
           TH2F* hpdf = (TH2F*)fepdf.Get(Form("output_dir_%d",iir));
-	  //if (iir == 1) cout<<"ckecking set dir "<<hpdf->Integral()<<endl;
           pdfss[iir]->SetDirPDF(hpdf);
-	  //if (iir == 1) cout<<"pdfss integral "<<pdfss[1]->GetDirPDF()->Integral()<<endl;
         }
         fepdf.Close();
 	rep->SetDirPDFs(pdfss);
-	//cout<<"testing here (dir 1 integral) "<<rep->GetDirPDFs().at(1)->GetDirPDF()->Integral()<<endl;
     }
     if (ifOutputRoot){
       for (int ipmt = 0; ipmt<pdfss.size() ; ipmt++){
@@ -670,7 +690,6 @@ int main(int argc, char**argv){
 
   for (Int_t aaa = lowerEvt;aaa< upperEvt; aaa++){
 
-    //cout<<aaa<<" taker "<<eventTaker[aaa]<<endl;
     if (eventTaker[aaa] == 0 ) continue;
     wbPDF* nothing =  rep->Reading_Processing_Events(fitlist[aaa],"event", iniVertex, do2Dpdf, doCharge, doCos );
 
@@ -700,7 +719,9 @@ int main(int argc, char**argv){
 
     cout<<4<<endl;
     ofstream out;
-    out.open(outputTxt.Data(), std::ofstream::out | std::ofstream::app);
+    //out.open(Form("output_result_timecut_finepdf_%dton_%dpct_full.txt",atoi(argv[1]),atoi(argv[2])),std::ofstream::out | std::ofstream::app);
+    if (oTxt)
+      out.open(outputTxt.Data(), std::ofstream::out | std::ofstream::app);
     cout<<"setting function"<<endl;
     double bestFit=1e9;
     double currX=1e9;
@@ -718,7 +739,8 @@ int main(int argc, char**argv){
 
           //cout<<"currX currY "<<xloop/50.-4<<" "<<yloop/50.-4<<"  res "<<res<<endl;
 	  cout<<aaa<<" "<<xloop<<" "<<yloop<<" "<<res<<endl;
-	  out<<aaa<<" "<<xloop<<" "<<yloop<<" "<<res<<endl;
+          if (oTxt)
+	    out<<aaa<<" "<<xloop<<" "<<yloop<<" "<<res<<endl;
           if (res < currRes) {
             currRes = res;
             currX = xloop;
@@ -770,12 +792,14 @@ int main(int argc, char**argv){
     if (!doScan){
       if (abs(bestFit) > 0 && abs(rep->getParVar(0)->getVal())>0 ){
         cout<<"directional vector and bestFit: "<<currX<<" "<<currY<<" "<<currZ<<" "<<bestFit<<endl;
-        out<<currX<<" "<<currY<<" "<<currZ<<" "<<bestFit<<endl;
+        if (oTxt)
+          out<<currX<<" "<<currY<<" "<<currZ<<" "<<bestFit<<endl;
       }
     }
     else{
         cout<<"directional vector and bestFit: "<<currX<<" "<<currY<<" "<<currZ<<" "<<bestFit<<"   angle between true and reco. "<<endl;
-        out<<currX<<" "<<currY<<" "<<currZ<<" "<<bestFit<<endl;
+        if (oTxt)
+          out<<currX<<" "<<currY<<" "<<currZ<<" "<<bestFit<<endl;
     }
   }
   if (ifOutputRoot){
