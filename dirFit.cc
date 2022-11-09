@@ -30,8 +30,8 @@ dirFit ::dirFit (const char* name)
   : RooAbsReal(name,name)
 {
   _pulls     = new RooListProxy("_pulls","_pulls",this);
-  RooRealVar* Par1 = new RooRealVar("par1","par1",1,-100,100);
-  RooRealVar* Par2 = new RooRealVar("par2","par2",1,-100,100);
+  RooRealVar* Par1 = new RooRealVar("par1","par1",1,0,100);
+  RooRealVar* Par2 = new RooRealVar("par2","par2",1,0,100);
   RooRealVar* Par3 = new RooRealVar("par3","par3",1,-10,10);
   RooRealVar* Par4 = new RooRealVar("par4","par4",0,-1000,1000);
   RooRealVar* Par5 = new RooRealVar("par5","par5",0,-1000,1000);
