@@ -373,13 +373,13 @@ int main(int argc, char**argv){
   double dddd,eeee,ffff;
   int cccc;
   double ccc;
-  double ggg[10000],hhh[10000],mmm[10000];
+  double ggg[100000],hhh[100000],mmm[100000];
   int current=0;
-  int counter[10000]={};
-  double iniX[10000] = {};
-  double iniY[10000] = {};
-  double iniZ[10000] = {};
-  int eventTaker[10000] = {};
+  int counter[100000]={};
+  double iniX[100000] = {};
+  double iniY[100000] = {};
+  double iniZ[100000] = {};
+  int eventTaker[100000] = {};
   int hitNumber[300][30] = {};
 
   TH1F* h_times = new TH1F("","",100,-5,5);
@@ -502,7 +502,7 @@ int main(int argc, char**argv){
     if (aaa>= lowerEvt && aaa< upperEvt ){//&& eee == 1){
     if (theta > -999){
       fitlist[aaa].push_back(pmtloc);
-      cout<<"pmt id "<<pmtloc.at(2)<<endl;
+      //cout<<"pmt id "<<pmtloc.at(2)<<endl;
       eventTaker[aaa] = 1;
     }
     if (iniX[aaa] == 0 && iniY[aaa] == 0 && iniZ[aaa] == 0)
@@ -760,7 +760,7 @@ int main(int argc, char**argv){
       gMinuit->mnexcm("MIGRAD",callsEDM,2,irf);
       m.migrad();
       res = m.save();
-      double bestFit = res->minNll();
+      bestFit = res->minNll();
       std::cout<<"fit status code is : "<< res->status()<<std::endl;
       cout<<"directional results: "<<rep->getParVar(0)->getVal()<<" "<<rep->getParVar(1)->getVal()<<" "<<rep->getParVar(2)->getVal()<<endl;
       currX = rep->getParVar(0)->getVal();
@@ -793,7 +793,13 @@ int main(int argc, char**argv){
       if (abs(bestFit) > 0 && abs(rep->getParVar(0)->getVal())>0 ){
         cout<<"directional vector and bestFit: "<<currX<<" "<<currY<<" "<<currZ<<" "<<bestFit<<endl;
         if (oTxt)
-          out<<currX<<" "<<currY<<" "<<currZ<<" "<<bestFit<<endl;
+	  //  status = 0    : OK
+          //  status = 1    : Covariance was mad  epos defined
+          //  status = 2    : Hesse is invalid
+          //  status = 3    : Edm is above max
+          //  status = 4    : Reached call limit
+          //  status = 5    : Any other failure
+          out<<currX<<" "<<currY<<" "<<currZ<<" "<<bestFit<<" "<<res->status()<<endl;
       }
     }
     else{
