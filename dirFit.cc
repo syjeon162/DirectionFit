@@ -347,7 +347,7 @@ Double_t dirFit::calPMTLikelihood( RooListProxy* _pulls, std::vector<wbEvent::wb
   return totll;
 }
 
-Double_t dirFit::calDirLikelihood( RooListProxy* _pulls, std::vector<wbEvent::wbHit> hitlist, std::vector<double> vertex, vector<wbPDF*> pdf, bool twodpdf, bool doCharge, bool doCos ) const{
+Double_t dirFit::calDirLikelihood( RooListProxy* _pulls, std::vector<wbEvent::wbHit> hitlist, std::vector<double> vertex, vector<wbPDF*> pdf, bool twodpdf, bool doCharge, bool doCos, int ntimebin ) const{
 
   double totll = 1;
   double theta = -999;
@@ -362,7 +362,9 @@ Double_t dirFit::calDirLikelihood( RooListProxy* _pulls, std::vector<wbEvent::wb
     if (i.t > _promptCut) continue;
     int pmtid = i.pmtid;
     int hdir = 20*((int)(phi)) + (int)(theta) ;
-    int itime = (i.t+10)/0.2;
+    //int itime = (i.t+10)/0.2;
+    //double ntimebin = 30;
+    int itime = (i.t+10)/(20./(double)ntimebin);
 
     //cout<<"hdir, itime and pmt id : "<<hdir<<" "<<itime<<" "<<pmtid<<endl;
     TH2F* h1 = pdf[hdir]->GetDirPDF();
@@ -372,8 +374,9 @@ Double_t dirFit::calDirLikelihood( RooListProxy* _pulls, std::vector<wbEvent::wb
     TGraph2D pdf_pmt(h1);
 
     double user_weight = 1;
-    if (pmtid>=192) user_weight = 0;
+    if (pmtid>=231) user_weight = 0;
 
+    //cout<<"pmt, time, weight "<<pmtid<<" "<<itime<<" "<<user_weight<<" "<<h1->GetBinContent( (int)(pmtid)+1, (int)(itime)+1)<<endl;
     double currll;
     double temp;
     if (_ifScan){
@@ -479,8 +482,8 @@ Double_t dirFit::evaluate() const
   //double result =  this->directionMatching(_pulls, _addTime);
   double result;
   if (_perDir) {
-    cout<<"evaluated result  "<<this->calDirLikelihood(_pulls, _eventHitList, _vertex, _dirpdf, _do2dpdf, _doCharge, _doCos)<<"  "<<-TMath::Log(this->calDirLikelihood(_pulls, _eventHitList, _vertex, _dirpdf, _do2dpdf, _doCharge, _doCos))<<endl;	  
-    return -TMath::Log(this->calDirLikelihood(_pulls, _eventHitList, _vertex, _dirpdf, _do2dpdf, _doCharge, _doCos));
+    cout<<"evaluated result  "<<this->calDirLikelihood(_pulls, _eventHitList, _vertex, _dirpdf, _do2dpdf, _doCharge, _doCos, _nbin_time)<<"  "<<-TMath::Log(this->calDirLikelihood(_pulls, _eventHitList, _vertex, _dirpdf, _do2dpdf, _doCharge, _doCos, _nbin_time))<<endl;	  
+    return -TMath::Log(this->calDirLikelihood(_pulls, _eventHitList, _vertex, _dirpdf, _do2dpdf, _doCharge, _doCos, _nbin_time ));
   }
   if (_perPMT){ 
     if (!_do3D)

@@ -368,7 +368,8 @@ int main(int argc, char**argv){
   in2.open(inputTxt.Data());
   cout<<"reading file "<<inputTxt.Data()<<endl;
 
-  int aaa,bbb;
+  int aaa;
+  int bbb;
   double ddd,fff,eee;
   double dddd,eeee,ffff;
   int cccc;

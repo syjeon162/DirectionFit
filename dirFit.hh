@@ -93,7 +93,6 @@ using namespace RooFit;
   public:
 
     dirFit (const char* name);
-
     dirFit (const dirFit & other, const char* name = 0): RooAbsReal(other,name) {};
     virtual TObject* clone(const char* newname) const {return new dirFit (*this, newname);};
     virtual ~dirFit () ;
@@ -110,7 +109,8 @@ using namespace RooFit;
     Double_t calPMTLikelihood_timeSlice( RooListProxy* _pulls, std::vector<wbEvent::wbHit> hitlist, std::vector<double> vertex, std::vector<std::vector<wbPDF*>> pdff, bool twodpdf, bool doCharge, bool doCos ) const ;
 
     Double_t calPMTLikelihood( RooListProxy* _pulls, std::vector<wbEvent::wbHit> hitlist, std::vector<double> vertex, std::vector<wbPDF*> pdf, bool twodpdf, bool doCharge, bool doCos, int hitlimit ) const;
-    Double_t calDirLikelihood( RooListProxy* _pulls, std::vector<wbEvent::wbHit> hitlist, std::vector<double> vertex, std::vector<wbPDF*> pdf, bool twodpdf, bool doCharge, bool doCos ) const;
+    Double_t calDirLikelihood( RooListProxy* _pulls, std::vector<wbEvent::wbHit> hitlist, std::vector<double> vertex, std::vector<wbPDF*> pdf, bool twodpdf, bool doCharge, bool doCos, int ntime ) const;
+    //Double_t calDirLikelihood( RooListProxy* _pulls, std::vector<wbEvent::wbHit> hitlist, std::vector<double> vertex, std::vector<wbPDF*> pdf, bool twodpdf, bool doCharge, bool doCos ) const;
     Double_t calPMTLikelihood_timeSlice( RooListProxy* _pulls, std::vector<wbEvent::wbHit> hitlist, std::vector<double> vertex, std::vector<std::vector<wbPDF*>> pdff, bool twodpdf, bool doCharge, bool doCos, int hitlimit ) const ;
     Double_t CalPromptCut(std::vector<std::vector<double> > list); 
 
@@ -134,7 +134,7 @@ using namespace RooFit;
 	wbEvent::wbHit hit;
         hit.x = i.at(0);
         hit.y = i.at(1);
-	if (_perPMT)  hit.pmtid = i.at(2);
+	if (_perPMT || _perDir)  hit.pmtid = i.at(2);
 	else	hit.z = i.at(2);
         hit.t = i.at(3);
 	hit.charge = i.at(10);
