@@ -22,7 +22,8 @@ $./app2 -i example_fit.txt -m 4 -p pmtlocation_4ton_index_17.txt --evtBase 0 -n 
 It will take the extrenal PDF example_water_perPMT_PDF.root, doing per PMT PDF, setting vertex (0,0,-500), taking true light from the file, taking two events.
 If you keep --scanning, it will do a scan to find the minimum, otherwise remove it, it will run with Minuit.
 
-```./app2 -i ${INPUT_FILE} -o ${OUTPUT_SCAN} -m ${MASS} -p pmtlocation_4ton_index_${BOTTOM_CASE}.txt 
+```
+./app2 -i ${INPUT_FILE} -o ${OUTPUT_SCAN} -m ${MASS} -p pmtlocation_4ton_index_${BOTTOM_CASE}.txt 
 -r t ${OUTPUT_ROOT} --evtBase 0 -n 10000 -s 0 --sometime 2 --upper ${UPPER} --lower 0 --orient 999 
 -b 1 --nbins 20 --originX 0 --originY 0 --originZ ${ZLOCATION} --npmt ${NPMT} --ndir 400 --ntime 30 
 --perDir --timeCorrection ${TIMECORR}
@@ -34,7 +35,8 @@ if you specify
 
 to make it like
 
-```./app2 -i ${INPUT} -o ${OUTPUT} -m 4 -p pmtlocation_4ton_index_${BOTTOM_CASE}.txt --evtBase 0 
+```
+./app2 -i ${INPUT} -o ${OUTPUT} -m 4 -p pmtlocation_4ton_index_${BOTTOM_CASE}.txt --evtBase 0 
 -n 10000 -s 0 --sometime 2 --upper ${upper} --lower ${lower} --orient 999 -b 1 --nbins 20 
 --originX 0 --originY 0 --originZ ${ZLOCATION} --npmt ${NPMT} --ndir 420 --ntime 30 --perPMT 
 --perDir --externalPDF ${EXTERNAL_PDF} --scanning 
