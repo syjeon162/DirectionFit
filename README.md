@@ -1,48 +1,74 @@
 A fitting tool for the WbLS detector direction.
-There are two kinds of PDF methods : per PMT PDF and universal angle-time PDF.
-The input is pre-calculated information in a text file. The reasoning is to remove the ratpac dependency.
-An example file is included.
 
-The bare minimum information needed are: 
- - for the pdf generation: sample txt files and the pmt information file
- - for the fitting: pdf files, sample txt files and the pmt information file
+There are three kinds of PDF methods : per direction PDF, per PMT PDF and universal angle-time PDF.
+Unless you have a very strong reason, we should use the per direction PDF since that is the most precise method to evalute the direction fitting performance by far.
+A bit more information about the fitter itself: https://nino.lbl.gov/eos/DocDB/cgi/ShowDocument?docid=139
+The fitting itself can be done in two ways:
+- minuit minimizer
+- scanning (this way is preferred. There will be a lot of local minimer if you do minuit.)
 
-For the formal one, per-calculated PDF will be needed. That calculation can be done with the same tool with the option --perPMT without --externalPDF.
-After that's done, both --perPMT and --externalPDF together will activate the reading of external PDFs.
+The vertex fitting can be performed simultaneously but the framework needs to be updated to include that feature. At the moment, fix the vertex location.
+The simultaneous fit will take more memory and reduce the running speed so for fast evaluation of the fixed-position sources such as beta, gamma, use this tool is much more efficient. Fast results should be provided to 1. optimize the source design 2. fine tune the framework itself.
 
-For a lot of features now, you need to ask me why they are there.
+Three useful files are provided to start an example run:
+- input_ntuple.root: isotropic 2 mev electrons at (0,0,-500) mm in ly100 1pct wbls.
+- fit_ntuple.root: downward pointing 2 mev electrons at (0,0,-500) mm in ly100 1pct wbls.
+- pdf_z-500_1pct_ly100.root: pre-calculated PDF with 2,000,000 events generated with isotropic 2 mev electrons at (0,0,-500) mm in ly100 1pct wbls.
 
-An example to run:
-```$make
-$./app2 -i example_fit.txt -m 4 -p pmtlocation_4ton_index_17.txt --evtBase 0 -n 1 -s 0 
---sometime 0.2 --upper 1 --lower 0 --orient 999 -b 0 --trueLight --perPMT --nbins 20 
---originX 0 --originY 0 --originZ -500 --scanning --externalPDF example_water_perPMT_PDF.root
-```
+There are two steps to complete a fitting procudure, the pdf generation and the direction evaluation.
+A fast way to start is to look at testRun.sh and try to run that file. Following provides a bit more information:
 
-It will take the extrenal PDF example_water_perPMT_PDF.root, doing per PMT PDF, setting vertex (0,0,-500), taking true light from the file, taking two events.
-If you keep --scanning, it will do a scan to find the minimum, otherwise remove it, it will run with Minuit.
+- PDF generation
+  The common useful information necessary:
+  - input ntuple file
+  - number of events
+  - vertex smearing in mm
+  - number of bins in theta angle (use 20 if no strong preference)
+  - original z location in mm
+  - number of directions (should be larger than number of beta ^ 2, for nbins for theta = 20, use at least 400 for this)
+  - number of bins in the time grid. Each step is 0.2 ns (use 100 if no other strong preference).
+  - output file
 
-```
-./app2 -i ${INPUT_FILE} -o ${OUTPUT_SCAN} -m ${MASS} -p pmtlocation_4ton_index_${BOTTOM_CASE}.txt 
--r t ${OUTPUT_ROOT} --evtBase 0 -n 10000 -s 0 --sometime 2 --upper ${UPPER} --lower 0 --orient 999 
--b 1 --nbins 20 --originX 0 --originY 0 --originZ ${ZLOCATION} --npmt ${NPMT} --ndir 400 --ntime 30 
---perDir --timeCorrection ${TIMECORR}
-```
-Running this will give you pdf
+  An example of running this is: 
+    ./app2 -i input_ntuple.root\
+         -n 100000 \
+         -s 0 \
+         --sometime 10 \
+         --nbins 20 \
+         --originZ -500 \
+         --ndir 420 \
+         --ntime 100 \
+         --scanning \
+         -r output.root
+         
+- Direction evaluation
+  The common useful information is similar the PDF generation. However, to distinguish the pdf generation and actual fitting. Following things are important:
+  - name an external pdf
+  - have a output text file ready
 
-if you specify
---externalPDF ${EXTERNALPDF}
+  An example of running the result:
+    ./app2 -i fit_ntuple.root\
+         -n 10 \  # fit for 10 events
+         -s 0 \ # no vertex smearing
+         --sometime 4 \ # use a tigher time cut to select more Cherenkov light
+         --nbins 20 \
+         --originZ -500 \
+         --ndir 420 \
+         --ntime 100 \
+         --scanning \ # using the scanning method
+         --externalPDF pdf_z-500_1pct_ly100.root \ # need to provide per-generated pdf
+         -o result.txt # output file
 
-to make it like
+The output file format will be (a,b,c,d):
+- a: event id
+- b: theta angle (zenith) in the unit of angle = b * (${\pi}/20.), here I assume there are 20 theta bins. The upward pointing is 0 and the downward pointing is 1. If you have a downward event, you might expect the b at 19 is better.
+- c: similar to the zenith angle, this is the azimuth angle. angle = c * (${\pi}*2/20.), assuming 20 bins in azimuth.
+- d: likelihood value. Smaller value indicates a more likely location.
+if you see something like (a,b,-1,c), this only appear once for each event at the end of the event list. It tells you the best fit directly:
+- a: zenith
+- b: azimuth
+- c: marker -1
+- d: likelihood
 
-```
-./app2 -i ${INPUT} -o ${OUTPUT} -m 4 -p pmtlocation_4ton_index_${BOTTOM_CASE}.txt --evtBase 0 
--n 10000 -s 0 --sometime 2 --upper ${upper} --lower ${lower} --orient 999 -b 1 --nbins 20 
---originX 0 --originY 0 --originZ ${ZLOCATION} --npmt ${NPMT} --ndir 420 --ntime 30 --perPMT 
---perDir --externalPDF ${EXTERNAL_PDF} --scanning 
-```
-
-then it will load the pre-obtained pdfs. If you don't specify externalPDF, it will only generate pdf and exit, otherwise it will perform the likelihood scanning. 
-
-NPMT, BOTTOM_CASE, MASS, UPPER, ZLOCATION, TIMECORR all depend on the geoemtry
-if considering z at (0,0,-500)mm with curved bottom, NPMT=236, BOTTOM_CASE=curved, MASS=4, UPPER=the event number in each of your file, I am taking 5,000 per file (don't use too large, there might be memory issue). ZLOCATION=-500, TIMECORR=0
+By finding the mark -1, you can plot the overall reconstructed direction. 
+Once again, the z vertex can be fitted by yourself with a list of different z. Once you combine all the result list and try to find the minimum value across both direction and z, you can effectively fit the z simultaneously. Imbedding z feature significantly slow the pdf producion so it is in the process of optimizing this procedure.
