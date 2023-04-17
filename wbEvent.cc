@@ -304,6 +304,7 @@ std::vector<wbPDF*> wbEvent::createDirPDFs(std::vector<wbHit> list, double time1
     double y     = i.trY;
     double z     = i.trZ;
     int pmtid = i.pmtid;
+
     double t     = i.trTime;
     double theta = i.trTheta;
     double phi   = i.trPhi;
@@ -330,7 +331,7 @@ std::vector<wbPDF*> wbEvent::createDirPDFs(std::vector<wbHit> list, double time1
     }
     else{
       if (hdir == 0 || hdir == 20 || hdir == 40)
-        cout<<"theta, phi, hdir, pmtid, t "<<theta<<" "<<phi<<" "<<hdir<<" "<<pmtid<<" "<<i.t<<endl;
+        //cout<<"theta, phi, hdir, pmtid, t "<<theta<<" "<<phi<<" "<<hdir<<" "<<pmtid<<" "<<i.t<<endl;
       //double geoWei = 2*TMath::Pi()* (1-TMath::Cos(abs(theta)) ) - 2*TMath::Pi()* (1-TMath::Cos(abs(theta)-0.01) );
       wbpdf[hdir]->GetDirPDF()->TH2F::Fill(pmtid, i.t);
     }
@@ -377,6 +378,7 @@ void wbEvent::SetHitListPMT(std::vector<std::vector<double> > num){
     hit.x = num[i].at(0);
     hit.y = num[i].at(1);
     hit.pmtid = num[i].at(2);
+
     hit.t = num[i].at(3);
     hit.trX = num[i].at(4);
     hit.trY = num[i].at(5);

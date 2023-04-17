@@ -56,12 +56,14 @@
 #include "RooGaussian.h"
 #include "RooProdPdf.h"
 #include "RooWorkspace.h"
+#include "RooMinuit.h"
 #include "RooNLLVar.h"
 #include "RooFitResult.h"
 #include "RooPlot.h"
 #include "RooDataSet.h"
 #include "RooExtendPdf.h"
 #include "RooChi2Var.h"
+#include "RooMinuit.h"
 #include "RooDataHist.h"
 #include "RooHistPdf.h"
 #include "RooRandom.h"
@@ -76,8 +78,7 @@
 #include "TMinuit.h"
 
 #include "RooFit.h"
-#include "RooMinimizer.h"
-#include "RooFormulaVar.h"
+#include "RooMinuit.h"
 #include "RooFitResult.h"
 #include "TMinuit.h"
 #include <RooRealVar.h>
@@ -115,7 +116,7 @@ using namespace std;
             }
     }
     void SetDirPDF(std::vector<std::vector<double>> a) {
-            if (a.size() != _dirPDF->GetNbinsX() || a.at(0).size() != _dirPDF->GetNbinsY()) {cout<<"setting a pdf with incorrect binning! "<<endl; exit(1);}
+            if (a.size() != _dirPDF->GetNbinsX() || a.at(0).size() != _dirPDF->GetNbinsY()) {cout<<"setting a pdf with incorrect binning! "<<endl; cout<<"binning from get() "<<a.at(0).size()<<" and to-be-set binning "<<_dirPDF->GetNbinsY()<<endl; exit(1);}
             for (int i=0;i<a.size();i++){
                    for (int j=0;j<a.at(0).size();j++)
                    {
@@ -134,7 +135,7 @@ using namespace std;
             }    
     }
     void SetDirPDF(TH2F* a) {
-            if (a->GetNbinsX() != _dirPDF->GetNbinsX() || a->GetNbinsY() != _dirPDF->GetNbinsY()) {cout<<"setting a pdf with incorrect binning! "<<endl; exit(1);}
+            if (a->GetNbinsX() != _dirPDF->GetNbinsX() || a->GetNbinsY() != _dirPDF->GetNbinsY()) {cout<<"setting a pdf with incorrect binning! "<<endl; cout<<" y binning from get() "<<a->GetNbinsY()<<" and to-be-set binning "<<_dirPDF->GetNbinsY()<<" "<<" x binning from get() "<<a->GetNbinsX()<<" and to-be-set binning "<<_dirPDF->GetNbinsX()<<endl; exit(1);}
             for (int i=0;i<a->GetNbinsX();i++){
                    for (int j=0;j<a->GetNbinsY();j++)
                    {

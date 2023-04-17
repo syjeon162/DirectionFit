@@ -30,8 +30,8 @@ dirFit ::dirFit (const char* name)
   : RooAbsReal(name,name)
 {
   _pulls     = new RooListProxy("_pulls","_pulls",this);
-  RooRealVar* Par1 = new RooRealVar("par1","par1",1,0,100);
-  RooRealVar* Par2 = new RooRealVar("par2","par2",1,0,100);
+  RooRealVar* Par1 = new RooRealVar("par1","par1",1,-100,100);
+  RooRealVar* Par2 = new RooRealVar("par2","par2",1,-100,100);
   RooRealVar* Par3 = new RooRealVar("par3","par3",1,-10,10);
   RooRealVar* Par4 = new RooRealVar("par4","par4",0,-1000,1000);
   RooRealVar* Par5 = new RooRealVar("par5","par5",0,-1000,1000);
@@ -158,34 +158,7 @@ std::vector<wbPDF*> dirFit::Reading_external_pdfs(TString pdf_filename){
   }
   for (int ii=0;ii<500;ii++){
     TH2F* hpdf = (TH2F*)f.Get(Form("output_%d",ii));
-    //pdfs[ii] ->SetPMTPDFBinning(hpdf->GetNbinsX(),0,3.14,hpdf->GetNbinsY(),0,6.28);
-    //wbPDF* pdf = new wbPDF("_pmtpdf") ;
-    //cout<<hpdf->GetNbinsX()<<" "<<hpdf->GetNbinsY()<<endl;
-    //std::vector<double> aa;
-    //std::vector<std::vector<double>> bb;
-    //for (int iii=0;iii<hpdf->GetNbinsX();iii++){
-      //for (int jjj=0; jjj< hpdf->GetNbinsY();jjj++){
-	//aa.push_back(hpdf->GetBinContent(iii+1,jjj+1));
-	//cout<<"reading content: "<<iii<<" "<<jjj<<" "<<hpdf->GetBinContent(iii+1,jjj+1)<<endl;
-	//if (hpdf->GetBinContent(iii+1,jjj+1) == 0 ) { cout<<"breaking at PMT "<<ii<<endl; exit(1);}
-      //}
-      //bb.push_back(aa);
-      //aa.clear();
-    //}
-    //for (int mm=0;mm< _nbins; mm++){
-      //for (int nn=0;nn<_nbins; nn++){
-        //pdfs[ii]->GetPMTPDF()->TH2F::SetBinContent(mm+1,nn+1,hpdf->GetBinContent(mm+1,nn+1));
-      //}
-    //}
     pdfs[ii]->SetPMTPDF(hpdf);
-    //cout<<444<<endl;
-    //TH2F* h1 = (TH2F*)f.Get(Form("output_%d",ii));
-    //cout<<"in reading external "<<h1->GetNbinsX()<<endl;
-    //cout<<"binning "<<ii<<"  "<<pdfs[ii]->GetPMTPDF()->GetNbinsX()<<endl;
-    //cout<<333<<endl;
-    //if (pdf->GetPMTPDF()->Integral() == 0 && ii< 200) { cout<<"we don't have even 200 PMTs? "<<endl; exit(1);} 
-    //pdfs.push_back(pdf);
-    //pdfs.assign( ii , pdf );
   }
   f.Close();
   return (std::vector<wbPDF*>)pdfs;
@@ -347,7 +320,7 @@ Double_t dirFit::calPMTLikelihood( RooListProxy* _pulls, std::vector<wbEvent::wb
   return totll;
 }
 
-Double_t dirFit::calDirLikelihood( RooListProxy* _pulls, std::vector<wbEvent::wbHit> hitlist, std::vector<double> vertex, vector<wbPDF*> pdf, bool twodpdf, bool doCharge, bool doCos, int ntimebin ) const{
+Double_t dirFit::calDirLikelihood( RooListProxy* _pulls, std::vector<wbEvent::wbHit> hitlist, std::vector<double> vertex, vector<wbPDF*> pdf, bool twodpdf, bool doCharge, bool doCos ) const{
 
   double totll = 1;
   double theta = -999;
@@ -362,9 +335,7 @@ Double_t dirFit::calDirLikelihood( RooListProxy* _pulls, std::vector<wbEvent::wb
     if (i.t > _promptCut) continue;
     int pmtid = i.pmtid;
     int hdir = 20*((int)(phi)) + (int)(theta) ;
-    //int itime = (i.t+10)/0.2;
-    //double ntimebin = 30;
-    int itime = (i.t+10)/(20./(double)ntimebin);
+    int itime = (i.t+10)/0.2;
 
     //cout<<"hdir, itime and pmt id : "<<hdir<<" "<<itime<<" "<<pmtid<<endl;
     TH2F* h1 = pdf[hdir]->GetDirPDF();
@@ -376,7 +347,6 @@ Double_t dirFit::calDirLikelihood( RooListProxy* _pulls, std::vector<wbEvent::wb
     double user_weight = 1;
     if (pmtid>=231) user_weight = 0;
 
-    //cout<<"pmt, time, weight "<<pmtid<<" "<<itime<<" "<<user_weight<<" "<<h1->GetBinContent( (int)(pmtid)+1, (int)(itime)+1)<<endl;
     double currll;
     double temp;
     if (_ifScan){
@@ -482,8 +452,8 @@ Double_t dirFit::evaluate() const
   //double result =  this->directionMatching(_pulls, _addTime);
   double result;
   if (_perDir) {
-    cout<<"evaluated result  "<<this->calDirLikelihood(_pulls, _eventHitList, _vertex, _dirpdf, _do2dpdf, _doCharge, _doCos, _nbin_time)<<"  "<<-TMath::Log(this->calDirLikelihood(_pulls, _eventHitList, _vertex, _dirpdf, _do2dpdf, _doCharge, _doCos, _nbin_time))<<endl;	  
-    return -TMath::Log(this->calDirLikelihood(_pulls, _eventHitList, _vertex, _dirpdf, _do2dpdf, _doCharge, _doCos, _nbin_time ));
+    cout<<"evaluated result  "<<this->calDirLikelihood(_pulls, _eventHitList, _vertex, _dirpdf, _do2dpdf, _doCharge, _doCos)<<"  "<<-TMath::Log(this->calDirLikelihood(_pulls, _eventHitList, _vertex, _dirpdf, _do2dpdf, _doCharge, _doCos))<<endl;	  
+    return -TMath::Log(this->calDirLikelihood(_pulls, _eventHitList, _vertex, _dirpdf, _do2dpdf, _doCharge, _doCos));
   }
   if (_perPMT){ 
     if (!_do3D)

@@ -22,12 +22,13 @@ TString inputTxt;
 TString outputTxt;
 TString outputRoot;
 TString pdf_filename; 
-int detMass;
+int detMass = 4;
 bool ifOutputRoot = false;
 double trueOriginX = 0, trueOriginY = 0, trueOriginZ = 0;
 double trueDirX = 0, trueDirY = 0, trueDirZ = -1;
 int evtNum = 10000;
 int branchSelection = 0;
+bool inNtuple = true;
 bool all_light = false;
 bool true_light = false;
 float vertexSmear = 0;
@@ -42,7 +43,7 @@ bool doScan = false;
 bool doFitVertex = false;
 int upperEvt = evtNum;
 int lowerEvt = 0;
-int orient=0;
+int orient=999;
 int specialConfig = 0;
 int nbins = 10;
 double zlowercut = 1e6;
@@ -50,18 +51,56 @@ bool perPMT = false;
 int evtBase = 0;
 bool externalPDF = false;
 bool do3D = false;
-bool perDir = false;
+bool perDir = true;
 double timeInterval = 0.5;
 double uppertime = 5;
 int hitNumLimit = 1e6;
-int npmt_bin = 252; 
+int npmt_bin = 231; 
 int ntime_bin = 30;
 int ndir_bin = 400;
 float timeCorrection = 0;
+bool debug = false;
+
+double mcx;
+double mcy;
+double mcz;
+double mcu;
+double mcv;
+double mcw;
+double mcke;
+int evid;
+int subev;
+long nanotime;
+int mcpcount;
+int mcpecount;
+int mcnhits;
+int nentries;
+std::vector<int>* pdgcodes;
+std::vector<double>* mcKEnergies;
+std::vector<double>* mcPosx;
+std::vector<double>* mcPosy;
+std::vector<double>* mcPosz;
+std::vector<double>* mcDirx;
+std::vector<double>* mcDiry;
+std::vector<double>* mcDirz;
+std::vector<int>*  hitPMTID;
+std::vector<double>* hitPMTTime;
+std::vector<double>* hitPMTDigitizedTime;
+std::vector<double>* hitPMTCharge;
+std::vector<double>* hitPMTDigitizedCharge;
+std::vector<int>* mcPMTID;
+std::vector<int>* mcPEIndex;
+std::vector<double>* mcPETime;
+std::vector<int>* mcPEProcess;
+std::vector<int>* pmtId;
+std::vector<double>* pmtX;
+std::vector<double>* pmtY;
+std::vector<double>* pmtZ;
+TTree* ttree;
 
 void parseArguments(int argc, char**argv)
 {
-  //cout<<"inside parse"<<endl;
+  cout<<"inside parse"<<endl;
   for (int iarg=0; iarg<argc; iarg++)
   {
     //cout<<iarg<<endl;
@@ -86,7 +125,6 @@ void parseArguments(int argc, char**argv)
       cout << "   --sometime        Adding some time to prompt time cut" << endl;
       cout << "   --digitize        Using digitized simulation" <<endl;
       cout << "   --2Dpdf           Doing 2D PDFs" <<endl;
-      cout << "   --orient          PDF building orientation, -999 means isotropic" <<endl;
       cout << "   --charge          Doing charge ?" <<endl;
       cout << "   --cos             PDF in cos ?" <<endl;
       cout << "   --scanning        Using space scanning instead of MINUIT?" <<endl;
@@ -106,6 +144,7 @@ void parseArguments(int argc, char**argv)
       cout << "   --ntime           Number of bins for the time dimension" <<endl;
       cout << "   --ndir            Number of direction options" <<endl;
       cout << "   --timeCorrection     Time correction for all the residual time" <<endl;
+      cout << "   --input_ntuple    input format is ntuple" <<endl;
       cout << "**************************************" << endl;
       exit(0);
     }
@@ -115,12 +154,12 @@ void parseArguments(int argc, char**argv)
     {
       iarg++;
       inputTxt = argv[iarg];
-      if (inputTxt.Contains(".txt"))
+      if (inputTxt.Contains(".txt") || inputTxt.Contains(".root"))
       {
         cout << "Input txt file ok" << endl;
       }
       else {
-        cerr << "input file must be a txt file!" << endl;
+        cerr << "input file must be a txt or ntuple file!" << endl;
         exit(1);
       }
     }
@@ -194,11 +233,6 @@ void parseArguments(int argc, char**argv)
     {
       iarg++;
       sometime = atof(argv[iarg]);
-    }
-    else if (string( argv[iarg])=="--orient" )
-    {
-      iarg++;
-      orient = atoi(argv[iarg]);
     }
     else if (string( argv[iarg])=="--digitize" )
     {
@@ -289,11 +323,6 @@ void parseArguments(int argc, char**argv)
       iarg++;
       hitNumLimit = atoi(argv[iarg]);
     }
-    else if (string( argv[iarg])=="--npmt" )
-    {
-      iarg++;
-      npmt_bin = atoi(argv[iarg]);
-    }    
     else if (string( argv[iarg])=="--ntime" )
     {
       iarg++;
@@ -309,17 +338,55 @@ void parseArguments(int argc, char**argv)
       iarg++;
       timeCorrection = atof(argv[iarg]);
     }
+    else if (string( argv[iarg]) == "--debug" ){
+      debug = true;
+    }
   }
 }
 
+void read_ntuple(std::string str){
+  TFile ftemp(str.c_str());
+  ttree = (TTree*)ftemp.Get("output");
+  nentries = ttree->GetEntries();
+  ttree->Print();
+  ttree->SetBranchAddress("mcx", &mcx);
+  ttree->SetBranchAddress("mcy", &mcy);
+  ttree->SetBranchAddress("mcz", &mcz);
+  ttree->SetBranchAddress("mcu", &mcu);
+  ttree->SetBranchAddress("mcv", &mcv);
+  ttree->SetBranchAddress("mcw", &mcw);
+  ttree->SetBranchAddress("mcke", &mcke);
+  ttree->SetBranchAddress("evid", &evid);
+  ttree->SetBranchAddress("subev", &subev);
+  ttree->SetBranchAddress("nanotime", &nanotime);
+  ttree->SetBranchAddress("mcpcount", &mcpcount);
+  ttree->SetBranchAddress("mcpecount", &mcpecount);
+  ttree->SetBranchAddress("mcnhits", &mcnhits);
+  ttree->SetBranchAddress("pdgcodes", &pdgcodes);
+  ttree->SetBranchAddress("mcKEnergies", &mcKEnergies);
+  ttree->SetBranchAddress("mcPosx", &mcPosx);
+  ttree->SetBranchAddress("mcPosy", &mcPosy);
+  ttree->SetBranchAddress("mcPosz", &mcPosz);
+  ttree->SetBranchAddress("mcDirx", &mcDirx);
+  ttree->SetBranchAddress("mcDiry", &mcDiry);
+  ttree->SetBranchAddress("mcDirz", &mcDirz);
+  ttree->SetBranchAddress("hitPMTID", &hitPMTID);
+  ttree->SetBranchAddress("hitPMTTime", &hitPMTTime);
+  ttree->SetBranchAddress("hitPMTDigitizedTime", &hitPMTDigitizedTime);
+  ttree->SetBranchAddress("hitPMTCharge", &hitPMTCharge);
+  ttree->SetBranchAddress("hitPMTDigitizedCharge", &hitPMTDigitizedCharge);
+  ttree->SetBranchAddress("mcPMTID", &mcPMTID);
+  ttree->SetBranchAddress("mcPEIndex", &mcPEIndex);
+  ttree->SetBranchAddress("mcPETime", &mcPETime);
+  ttree->SetBranchAddress("mcPEProcess", &mcPEProcess);
+}
 
 int main(int argc, char**argv){
-//int main(){
 
+  cout<<"starting.."<<endl;
   parseArguments( argc, argv);
   cout<<"intput and output txt : "<<inputTxt.Data()<<" "<<outputTxt.Data()<<endl;
   if (ifOutputRoot) cout<<"output root file : "<<outputRoot.Data()<<endl;
-  cout<<"pmt location and detector mass : "<<pmtLocation.Data()<<" "<<detMass<<endl;
 
   TH3F* h3 = new TH3F("","", 100,-1200,1200, 100, -1200,1200,100,-1200,1200);
   TH3F* h4 = new TH3F("","", 100,-1200,1200, 100, -1200,1200,100,-1200,1200);
@@ -332,25 +399,193 @@ int main(int argc, char**argv){
     hhz[i] = new TH1F("","",20,-1200,1200);
   }
 
-  ifstream in;
-  in.open(pmtLocation.Data());
   double pmtx[264]={};
   double pmty[264]={};
   double pmtz[264]={};
-
-  int aa, ee;
-  double bb,cc,dd;
-  while (!in.eof()){
-    in>>aa>>bb>>cc>>dd>>ee;
-    pmtx[aa] = bb;
-    pmty[aa] = cc;
-    pmtz[aa] = dd;
-  }
 
   TFile* outfile;
   TTree tree("tree","tree");
   double trueDir[3], recoDir[3];
   int nPMT; double PMTid[264][3]; double PMTtime[264]; double PMTangle[264];
+
+  std::vector<std::vector<double> > pmtlist;
+  std::vector<std::vector<std::vector<double> > > fitlist(10000);
+  double ggg[10000],hhh[10000],mmm[10000];
+  double iniX[10000] = {};
+  double iniY[10000] = {};
+  double iniZ[10000] = {};
+  int eventTaker[10000] = {};
+  int bbb;
+
+  cout<<888<<endl;
+  TH1F* h_times = new TH1F("","",100,-5,15);
+  TH1F* h_timec = new TH1F("","",125,-10,15);
+  TH1F* h_pmtzs = new TH1F("","",30,-1500,1500);
+  TH1F* h_pmtzc = new TH1F("","",30,-1500,1500);
+  TH1F* h_charges = new TH1F("","",200,0,1000);
+  TH1F* h_chargec = new TH1F("","",200,0,1000);
+  TH1F* h_mcpcount = new TH1F("","",300,0,300);
+  TH1F* h_mcpecount = new TH1F("","",600,0,600);
+  TH1F* h_mcnhits = new TH1F("","",300,0,300);
+  TH1F* h_mcpecountc = new TH1F("","",600,0,600);
+  TH1F* h_mcnhitsc = new TH1F("","",300,0,300);
+  TH2F* h_timeVSprocess = new TH2F("","",100,-5,15,5,0,5);
+  TH2F* h_timeVSpos = new TH2F("","",100,-10,15,30,-1500,1500);
+
+  /////////////////////////////////////////////////////////////////////////////////////////////
+  ////////////////////////////////////////////// using the ntuple input file
+  // PDF:
+  // 1. pmt locx 2. pmt locy 3. pmt locz 4. time 5. true locx 6. true locy 7. true locz
+  //                         |  pmt id
+  // 8. constant 0 9. theta 10. phi 11. charge 
+  // fitting:
+  // same thing
+
+    //read_ntuple(inputTxt.Data());
+      
+    TFile ftemp(inputTxt.Data());
+    ttree = (TTree*)ftemp.Get("output");
+    nentries = ttree->GetEntries();
+    ttree->Print();
+    ttree->SetBranchAddress("mcx", &mcx);
+    ttree->SetBranchAddress("mcy", &mcy);
+    ttree->SetBranchAddress("mcz", &mcz);
+    ttree->SetBranchAddress("mcu", &mcu);
+    ttree->SetBranchAddress("mcv", &mcv);
+    ttree->SetBranchAddress("mcw", &mcw);
+    ttree->SetBranchAddress("mcke", &mcke);
+    ttree->SetBranchAddress("evid", &evid);
+    ttree->SetBranchAddress("subev", &subev);
+    ttree->SetBranchAddress("nanotime", &nanotime);
+    ttree->SetBranchAddress("mcpcount", &mcpcount);
+    ttree->SetBranchAddress("mcpecount", &mcpecount);
+    ttree->SetBranchAddress("mcnhits", &mcnhits);
+    ttree->SetBranchAddress("pdgcodes", &pdgcodes);
+    ttree->SetBranchAddress("mcKEnergies", &mcKEnergies);
+    ttree->SetBranchAddress("mcPosx", &mcPosx);
+    ttree->SetBranchAddress("mcPosy", &mcPosy);
+    ttree->SetBranchAddress("mcPosz", &mcPosz);
+    ttree->SetBranchAddress("mcDirx", &mcDirx);
+    ttree->SetBranchAddress("mcDiry", &mcDiry);
+    ttree->SetBranchAddress("mcDirz", &mcDirz);
+    ttree->SetBranchAddress("hitPMTID", &hitPMTID);
+    ttree->SetBranchAddress("hitPMTTime", &hitPMTTime);
+    ttree->SetBranchAddress("hitPMTDigitizedTime", &hitPMTDigitizedTime);
+    ttree->SetBranchAddress("hitPMTCharge", &hitPMTCharge);
+    ttree->SetBranchAddress("hitPMTDigitizedCharge", &hitPMTDigitizedCharge);
+    ttree->SetBranchAddress("mcPMTID", &mcPMTID);
+    ttree->SetBranchAddress("mcPEIndex", &mcPEIndex);
+    ttree->SetBranchAddress("mcPETime", &mcPETime);
+    ttree->SetBranchAddress("mcPEProcess", &mcPEProcess);
+  
+    //add the pmt mapping from ntuple here
+    TTree* pmt_tree = (TTree*)ftemp.Get("meta");
+    pmt_tree->SetBranchAddress("pmtId", &pmtId);
+    pmt_tree->SetBranchAddress("pmtX", &pmtX);
+    pmt_tree->SetBranchAddress("pmtY", &pmtY);
+    pmt_tree->SetBranchAddress("pmtZ", &pmtZ);
+    pmt_tree->Print();
+
+    pmt_tree->GetEntry(0);
+    int spmt = -1;
+    for (int i=0;i<pmtId->size(); i++){
+      if (i != pmtId->at(i)) {
+        cout<<"pmt id does not correspond to the order! exit!"<<endl;
+	exit(0);
+      }
+      if (pmtId->at(i)>spmt) {
+	spmt = pmtId->at(i);
+      }
+      pmtx[i] = pmtX->at(i);
+      pmty[i] = pmtY->at(i);
+      pmtz[i] = pmtZ->at(i);
+    }
+    npmt_bin = spmt+1;
+    cout<<"ntuple entries "<<nentries<<endl;
+    int counter[10000] = {};
+    int pecounter[10000] = {};
+
+    for (int i=0;i<nentries;i++){
+      ttree->GetEntry(i);
+     
+      if(i > evtNum || i< evtBase) continue;
+      std::vector<double> pmtloc;
+      double theta = -1; double phi = -1;
+      int pmtgothit[300] = {};
+
+      h_mcpcount->Fill(mcpcount);
+      h_mcpecount->Fill(mcpecount);
+      h_mcnhits->Fill(mcnhits);
+
+      for (int ihit = 0; ihit< hitPMTTime->size(); ihit++){
+      
+	pmtloc.push_back(pmtx[hitPMTID->at(ihit)]);
+        pmtloc.push_back(pmty[hitPMTID->at(ihit)]);
+	//cout<<"pmt id "<< hitPMTID->at(ihit)<<endl;
+	if (perDir || perPMT)
+	  pmtloc.push_back(hitPMTID->at(ihit));
+	else
+	  pmtloc.push_back(pmtz[hitPMTID->at(ihit)]);
+	double pmtxloc = pmtx[hitPMTID->at(ihit)];
+	double pmtyloc = pmty[hitPMTID->at(ihit)];
+	double pmtzloc = pmtz[hitPMTID->at(ihit)];
+	bbb = hitPMTID->at(ihit);
+	double ccc = hitPMTTime->at(ihit) - (sqrt((pmtxloc-trueOriginX)*(pmtxloc-trueOriginX)+(pmtyloc-trueOriginY)*(pmtyloc-trueOriginY) + (pmtzloc-trueOriginZ)*(pmtzloc-trueOriginZ))/200.) + timeCorrection;
+        double locX = mcx+ gRandom->Gaus(0, vertexSmear);
+        double locY = mcy+ gRandom->Gaus(0, vertexSmear);
+        double locZ = mcz+ gRandom->Gaus(0, vertexSmear);
+
+        h_timec->Fill(ccc);
+        h_pmtzc->Fill(pmtzloc );
+        h_timeVSpos->Fill(ccc, pmtzloc);
+
+	pmtloc.push_back(ccc);
+	pmtloc.push_back(locX);
+	pmtloc.push_back(locY);
+	pmtloc.push_back(locZ);
+
+        ggg[i] = mcu / sqrt(mcu*mcu + mcv*mcv + mcw*mcw);	
+	hhh[i] = mcv / sqrt(mcu*mcu + mcv*mcv + mcw*mcw);
+	mmm[i] = mcw / sqrt(mcu*mcu + mcv*mcv + mcw*mcw);
+
+        if (orient != 999) {
+          std::cout<<"only isotropic PDF is supported as of Dec. 2022. Exiting!"<<std::endl;
+          exit(0);
+        }
+        if (orient == 999) {
+          pmtloc.push_back(0);
+          if (mmm[i]>0){
+            pmtloc.push_back(TMath::ATan(sqrt(ggg[i]*ggg[i]+hhh[i]*hhh[i])/abs(mmm[i])));
+            theta = TMath::ATan(sqrt(ggg[i]*ggg[i]+hhh[i]*hhh[i])/abs(mmm[i]));
+          }
+          else {
+            pmtloc.push_back(TMath::Pi() - TMath::ATan(sqrt(ggg[i]*ggg[i]+hhh[i]*hhh[i])/abs(mmm[i])));
+            theta = TMath::Pi() - TMath::ATan(sqrt(ggg[i]*ggg[i]+hhh[i]*hhh[i])/abs(mmm[i]));
+          }
+          if (ggg[i]>=0 && hhh[i]>0) {pmtloc.push_back(TMath::ATan(hhh[i]/ggg[i])); phi = TMath::ATan(hhh[i]/ggg[i]);}
+          else if (ggg[i]<0 && hhh[i]>=0) {pmtloc.push_back(TMath::ATan(hhh[i]/ggg[i])+TMath::Pi()); phi = TMath::ATan(hhh[i]/ggg[i])+TMath::Pi();}
+          else if (ggg[i]<0 && hhh[i]<0) {pmtloc.push_back(TMath::ATan(hhh[i]/ggg[i])+ TMath::Pi()); phi = TMath::ATan(hhh[i]/ggg[i])+ TMath::Pi();}
+          else if (ggg[i]>=0 && hhh[i]<=0) {pmtloc.push_back(TMath::Pi()*2 -TMath::ATan(abs(hhh[i])/ggg[i])); phi = TMath::Pi()*2 -TMath::ATan(abs(hhh[i])/ggg[i]); }
+        }
+	pmtloc.push_back(hitPMTCharge->at(ihit));
+        pmtlist.push_back(pmtloc);
+        if (i>= lowerEvt && i< upperEvt ){
+          if (theta > -999){
+            fitlist[i].push_back(pmtloc);
+            eventTaker[i] = 1;
+          }
+          if (iniX[i] == 0 && iniY[i] == 0 && iniZ[i] == 0)
+            iniX[i] = pmtx[bbb]; iniY[i] = pmty[bbb]; iniZ[i] = pmtz[bbb];
+        }
+        pmtloc.clear();
+      }
+      for (int iii=evtBase;iii<evtNum;iii++){
+        h_mcnhitsc->Fill(counter[iii]);
+        h_mcpecountc->Fill(pecounter[iii]);
+      }
+  }
+  ////////////////////////////////////////////// end of using ntuple input file
+  /////////////////////////////////////////////////////////////////////////////////////////////
 
   if (ifOutputRoot){
     outfile = TFile::Open( outputRoot.Data(), "recreate");
@@ -362,158 +597,6 @@ int main(int argc, char**argv){
     tree.Branch("PMTangle",&PMTangle,"PMTangle[264]/D");
   }
 
-  std::vector<std::vector<double> > pmtlist;
-  std::vector<std::vector<std::vector<double> > > fitlist(10000);
-  ifstream in2;
-  in2.open(inputTxt.Data());
-  cout<<"reading file "<<inputTxt.Data()<<endl;
-
-  int aaa;
-  int bbb;
-  double ddd,fff,eee;
-  double dddd,eeee,ffff;
-  int cccc;
-  double ccc;
-  double ggg[100000],hhh[100000],mmm[100000];
-  int current=0;
-  int counter[100000]={};
-  double iniX[100000] = {};
-  double iniY[100000] = {};
-  double iniZ[100000] = {};
-  int eventTaker[100000] = {};
-  int hitNumber[300][30] = {};
-
-  TH1F* h_times = new TH1F("","",100,-5,5);
-  TH1F* h_timec = new TH1F("","",100,-5,5);
-  TH1F* h_pmtzs = new TH1F("","",30,-1500,1500);
-  TH1F* h_pmtzc = new TH1F("","",30,-1500,1500);
-
-  if (digitize && branchSelection == 0 ){
-    cout<<"  --- be careful! You can't do digitization and true branch at the same time !! ---"<<endl;
-    exit(0);
-  }
-
-  int count_top = 0;
-  int count_side = 0;
-  int count_bot = 0;
-  while (!in2.eof() ){
-      in2>>aaa>>bbb>>ccc>>ddd>>eee>>fff;
-      if (bbb == -999){
-        ggg[aaa] = ddd;
-	hhh[aaa] = eee;
-	mmm[aaa] = fff;
-	continue;
-      }
-
-    double pmtxloc; double pmtyloc;
-    pmtxloc = pmtx[bbb];
-    pmtyloc = pmty[bbb];
-
-    ccc = ccc - (sqrt((pmtxloc-trueOriginX)*(pmtxloc-trueOriginX)+(pmtyloc-trueOriginY)*(pmtyloc-trueOriginY) + (pmtz[bbb]-trueOriginZ)*(pmtz[bbb]-trueOriginZ))/200.) + timeCorrection;
-    if (ddd == 0 ){
-      h_timec->Fill(ccc);
-      h_pmtzc->Fill(pmtz[bbb]);
-    }
-    else {
-      h_times->Fill(ccc);
-      h_pmtzs->Fill(pmtz[bbb]);    
-    }
-
-    if(aaa > evtNum || aaa< evtBase) continue;
-    if (true_light && ddd != 0) continue;
-    if (eee != branchSelection ) continue;
-    if (true_light && eee == 1) continue;
-
-    double uRadius = sqrt(pmtxloc*pmtxloc+pmtyloc*pmtyloc);
-    if (specialConfig == 1) {
-
-       if ( ! ( (uRadius > 243.84-10 && uRadius < 243.84 + 10) ||
-		(uRadius > 487.68-10 && uRadius < 487.68 + 10) ||
-		(uRadius > 731.52-10 && uRadius < 731.52 + 10)
-		)) continue;  
-    }
-    if (specialConfig == 2) {
-
-       if ( ! ( (uRadius > 134.112-10 && uRadius < 134.112 + 10 && pmtyloc<0)  ||
-                (uRadius > 268.224-10 && uRadius < 268.224 + 10 && pmtyloc>=0) ||
-                (uRadius > 402.336-10 && uRadius < 402.336 + 10 && pmtyloc<0)  ||
-		(uRadius > 536.448-10 && uRadius < 536.448 + 10 && pmtyloc>=0) ||
-                (uRadius > 670.560-10 && uRadius < 670.560 + 10 && pmtyloc<0)  ||
-		(uRadius > 804.672-10 && uRadius < 804.672 + 10 && pmtyloc>=0)
-                )) continue;
-    }
-    if (specialConfig == 3) {
-       if ( ! ( (uRadius > 134.112-10 && uRadius < 134.112 + 10 && pmtyloc<0 && pmtxloc<=0)  || (uRadius > 184.112-10 && uRadius < 184.112 + 10 && pmtyloc<0 && pmtxloc>0) ||
-                (uRadius > 268.224-10 && uRadius < 268.224 + 10 && pmtyloc>=0 && pmtxloc<=0) || (uRadius > 318.224-10 && uRadius < 318.224 + 10 && pmtyloc>=0 && pmtxloc>0) ||
-                (uRadius > 402.336-10 && uRadius < 402.336 + 10 && pmtyloc<0 && pmtxloc<=0)  || (uRadius > 452.336-10 && uRadius < 452.336 + 10 && pmtyloc<0 && pmtxloc>0) ||
-                (uRadius > 536.448-10 && uRadius < 536.448 + 10 && pmtyloc>=0 && pmtxloc<=0) || (uRadius > 586.448-10 && uRadius < 586.448 + 10 && pmtyloc>=0 && pmtxloc>0) ||
-                (uRadius > 670.560-10 && uRadius < 670.560 + 10 && pmtyloc<0 && pmtxloc<=0)  || (uRadius > 720.560-10 && uRadius < 720.560 + 10 && pmtyloc<0 && pmtxloc>0) ||
-                (uRadius > 804.672-10 && uRadius < 804.672 + 10 && pmtyloc>=0 && pmtxloc<=0) || (uRadius > 854.672-10 && uRadius < 854.672 + 10 && pmtyloc>=0 && pmtxloc>0) 
-                )) continue;
-
-    }
-    if (specialConfig == 4){
-    
-       double doingNothing = 1;
-    }
-    // event branch eee == 1;  mc branch eee == 0
-    std::vector<double> pmtloc;
-    pmtloc.push_back(pmtxloc);
-    pmtloc.push_back(pmtyloc);
-    if (!perPMT && !perDir)
-      pmtloc.push_back(pmtz[bbb]);
-    else
-      pmtloc.push_back(bbb);
-    pmtloc.push_back(ccc);
-    double locX = trueOriginX+ gRandom->Gaus(0, vertexSmear); 
-    double locY = trueOriginY+ gRandom->Gaus(0, vertexSmear); 
-    double locZ = trueOriginZ+ gRandom->Gaus(0, vertexSmear);
-
-    double theta = -1; double phi = -1;
-
-    // true location x, y, z
-    pmtloc.push_back(locX); pmtloc.push_back(locY); pmtloc.push_back(locZ);
-    // true time, theta, phi
-    // The direction vector: TVector3 dvec (TMath::Cos(phi)*TMath::Sin(theta), TMath::Sin(phi)*TMath::Sin(theta), TMath::Cos(theta));
-    // for direction (1,0,0) theta = TMath::Pi()/2.; phi = 0;  
-    // for direction (0,1,0) theta = TMath::Pi()/2.; phi =  TMath::Pi()/2.;
-    // for direction (0,0,-1) theta = TMath::Pi(); phi = 0;
-    if (orient == 999) {
-      pmtloc.push_back(0); 
-      if (mmm[aaa]>0){
-        pmtloc.push_back(TMath::ATan(sqrt(ggg[aaa]*ggg[aaa]+hhh[aaa]*hhh[aaa])/abs(mmm[aaa]))); 
-	theta = TMath::ATan(sqrt(ggg[aaa]*ggg[aaa]+hhh[aaa]*hhh[aaa])/abs(mmm[aaa]));
-      }
-      else {
-	pmtloc.push_back(TMath::Pi() - TMath::ATan(sqrt(ggg[aaa]*ggg[aaa]+hhh[aaa]*hhh[aaa])/abs(mmm[aaa])));
-	theta = TMath::Pi() - TMath::ATan(sqrt(ggg[aaa]*ggg[aaa]+hhh[aaa]*hhh[aaa])/abs(mmm[aaa]));
-      }
-      if (ggg[aaa]>=0 && hhh[aaa]>0) {pmtloc.push_back(TMath::ATan(hhh[aaa]/ggg[aaa])); phi = TMath::ATan(hhh[aaa]/ggg[aaa]);}
-      else if (ggg[aaa]<0 && hhh[aaa]>=0) {pmtloc.push_back(TMath::ATan(hhh[aaa]/ggg[aaa])+TMath::Pi()); phi = TMath::ATan(hhh[aaa]/ggg[aaa])+TMath::Pi();}
-      else if (ggg[aaa]<0 && hhh[aaa]<0) {pmtloc.push_back(TMath::ATan(hhh[aaa]/ggg[aaa])+ TMath::Pi()); phi = TMath::ATan(hhh[aaa]/ggg[aaa])+ TMath::Pi();}
-      else if (ggg[aaa]>=0 && hhh[aaa]<=0) {pmtloc.push_back(TMath::Pi()*2 -TMath::ATan(abs(hhh[aaa])/ggg[aaa])); phi = TMath::Pi()*2 -TMath::ATan(abs(hhh[aaa])/ggg[aaa]); }
-    }
-    else if (orient == 1) {pmtloc.push_back(0); pmtloc.push_back(TMath::Pi()/2.); pmtloc.push_back(TMath::Pi()/2.);}
-    else if (orient == 2) {pmtloc.push_back(0); pmtloc.push_back(TMath::Pi()/2.); pmtloc.push_back(0);}
-    else if (orient == 0) {pmtloc.push_back(0); pmtloc.push_back(TMath::Pi()); pmtloc.push_back(0);}
-    else { cout<<"need to set up an orient "<<endl; exit(1);}
-    pmtloc.push_back(fff);
-
-    pmtlist.push_back(pmtloc);
-    if (aaa>= lowerEvt && aaa< upperEvt ){//&& eee == 1){
-    if (theta > -999){
-      fitlist[aaa].push_back(pmtloc);
-      //cout<<"pmt id "<<pmtloc.at(2)<<endl;
-      eventTaker[aaa] = 1;
-    }
-    if (iniX[aaa] == 0 && iniY[aaa] == 0 && iniZ[aaa] == 0)
-      iniX[aaa] = pmtxloc; iniY[aaa] = pmtyloc; iniZ[aaa] = pmtz[bbb]; 
-    }
-
-    hitNumber[bbb][(int)(theta/0.2)] ++;
-    pmtloc.clear();
-    counter[aaa]++;
-  }
   cout<<"event induced PMT loaded "<<endl;
 
   RooFitResult* res;
@@ -523,23 +606,7 @@ int main(int argc, char**argv){
   // 1 ton time cut 4.5, 2.4 ton time cut 5.5, 5 ton time cut 6.5
   cout<<"doing digitize ? "<<digitize<<"  adding sometime ? "<<sometime<<endl;
 
-  if (!digitize){
-    if (detMass == 1)
-      //rep->SetPromptCut(4.5+sometime);
-      rep->SetPromptCut(4.5+sometime/10.);
-      //rep->SetPromptCut(5.5);
-    if (detMass == 2)
-      rep->SetPromptCut(5.5+sometime/10.);
-    if (detMass == 3)
-      rep->SetPromptCut(6+sometime/10.);
-    if (detMass == 5 || detMass == 4)
-      //rep->SetPromptCut(6.5+sometime);
-      //rep->SetPromptCut(6.5+sometime/10.);
-      rep->SetPromptCut(sometime);  
-  }
-  else{
-      rep->SetPromptCut(1.01+sometime/10.);
-  }
+  rep->SetPromptCut(sometime);  
 
   rep->SetNbins(nbins);
   rep->SetIfDoCharge(doCharge);
@@ -559,6 +626,7 @@ int main(int argc, char**argv){
   cout<<"reading processing events"<<endl;
   std::vector<double> iniVertex(3);
   wbPDF* pdfs;
+  //std::vector<wbPDF*> pdfss;
   std::vector<wbPDF*> pdfss(500);
   for (int ipmt = 0; ipmt< 500;ipmt++){
     pdfss[ipmt] = new wbPDF("_wbpdf");
@@ -595,7 +663,7 @@ int main(int argc, char**argv){
     cout<<"pdf obtained"<<endl;
   }
   else if(perDir){
-    cout<<"reading perPMT PDFs .. "<<endl;
+    cout<<"reading perDir PDFs .. "<<endl;
     rep->SetNbins_time(ntime_bin);
     rep->SetNdir(ndir_bin);
     rep->SetNbins_pmt(npmt_bin);
@@ -603,11 +671,6 @@ int main(int argc, char**argv){
       cout<<"doing a perDir pdf generation.."<<endl;
       pdfss = rep->Reading_Processing_Events_PerDir(pmtlist,"dirpdf", iniVertex, do2Dpdf, doCharge, doCos );
       cout<<"checking pdfss, size, and size of individual pdfss element:  "<<pdfss.size()<<" "<<pdfss[1]->GetDirPDF()->GetNbinsX()<<" "<<pdfss[1]->GetDirPDF()->GetNbinsY()<<endl;
-      for (int iii=0;iii<pdfss[1]->GetDirPDF()->GetNbinsX(); iii++){
-        for (int jjj=0;jjj<pdfss[1]->GetDirPDF()->GetNbinsY(); jjj++){
-	   if (pdfss[368]->GetDirPDF()->GetBinContent(iii+1,jjj+1)>0) cout<<"in app2 iii, jjj, pdfss[1] element: "<<iii<<" "<<jjj<<" "<<pdfss[368]->GetDirPDF()->GetBinContent(iii+1,jjj+1)<<endl;
-        }
-      }
     }
     else{
         TFile fepdf(pdf_filename.Data());
@@ -617,6 +680,7 @@ int main(int argc, char**argv){
         }
         fepdf.Close();
 	rep->SetDirPDFs(pdfss);
+	//cout<<"testing here (dir 1 integral) "<<rep->GetDirPDFs().at(1)->GetDirPDF()->Integral()<<endl;
     }
     if (ifOutputRoot){
       for (int ipmt = 0; ipmt<pdfss.size() ; ipmt++){
@@ -680,17 +744,27 @@ int main(int argc, char**argv){
     cout<<"pmt pdf obtained"<<endl;
   }
   if (ifOutputRoot){
+
     h_times->Write("h_times");
     h_pmtzs->Write("h_pmtzs");
     h_timec->Write("h_timec");
     h_pmtzc->Write("h_pmtzc");
-    outfile->Write();
+    h_charges->Write("h_charges");
+    h_chargec->Write("h_chargec");
+    h_mcpcount->Write("h_mcpcount");
+    h_mcpecount->Write("h_mcpecount");
+    h_mcnhits->Write("h_mcnhits");
+    h_mcpecountc->Write("h_mcpecountc");
+    h_mcnhitsc->Write("h_mcnhitsc");
+    h_timeVSprocess->Write("h_timeVSprocess");
+    h_timeVSpos->Write("h_timeVSpos");
   }
 
-  if (!externalPDF) { cout<<"just getting pdf, not performing fit .. "<<endl; exit(1);}
+  if (!externalPDF) { cout<<"just getting pdf, not performing fit .. "<<endl; outfile->Write(); outfile->Close(); exit(1);}
 
   for (Int_t aaa = lowerEvt;aaa< upperEvt; aaa++){
 
+    //cout<<aaa<<" taker "<<eventTaker[aaa]<<endl;
     if (eventTaker[aaa] == 0 ) continue;
     wbPDF* nothing =  rep->Reading_Processing_Events(fitlist[aaa],"event", iniVertex, do2Dpdf, doCharge, doCos );
 
@@ -718,9 +792,7 @@ int main(int argc, char**argv){
     rep->SetHitNumLimit(hitNumLimit);
     if (hitNumLimit < 1e5) {cout<<"--------------------- setting hit number limit !!! "<<endl; }
 
-    cout<<4<<endl;
     ofstream out;
-    //out.open(Form("output_result_timecut_finepdf_%dton_%dpct_full.txt",atoi(argv[1]),atoi(argv[2])),std::ofstream::out | std::ofstream::app);
     if (oTxt)
       out.open(outputTxt.Data(), std::ofstream::out | std::ofstream::app);
     cout<<"setting function"<<endl;
@@ -730,16 +802,13 @@ int main(int argc, char**argv){
     double currZ=1e9;
     if (doScan){
       double currRes = 1e9;
-      for (int xloop =1;xloop<20;xloop++){
+      for (int xloop =0;xloop<20;xloop++){
         for (int yloop=0;yloop<20;yloop++){
           rep->getParVar(0)->setVal(xloop);
           rep->getParVar(1)->setVal(yloop);
 	  rep->getParVar(0)->setConstant(true);
           rep->getParVar(1)->setConstant(true);
           double res = rep->evaluate();
-
-          //cout<<"currX currY "<<xloop/50.-4<<" "<<yloop/50.-4<<"  res "<<res<<endl;
-	  cout<<aaa<<" "<<xloop<<" "<<yloop<<" "<<res<<endl;
           if (oTxt)
 	    out<<aaa<<" "<<xloop<<" "<<yloop<<" "<<res<<endl;
           if (res < currRes) {
@@ -761,7 +830,7 @@ int main(int argc, char**argv){
       gMinuit->mnexcm("MIGRAD",callsEDM,2,irf);
       m.migrad();
       res = m.save();
-      bestFit = res->minNll();
+      double bestFit = res->minNll();
       std::cout<<"fit status code is : "<< res->status()<<std::endl;
       cout<<"directional results: "<<rep->getParVar(0)->getVal()<<" "<<rep->getParVar(1)->getVal()<<" "<<rep->getParVar(2)->getVal()<<endl;
       currX = rep->getParVar(0)->getVal();
@@ -794,13 +863,7 @@ int main(int argc, char**argv){
       if (abs(bestFit) > 0 && abs(rep->getParVar(0)->getVal())>0 ){
         cout<<"directional vector and bestFit: "<<currX<<" "<<currY<<" "<<currZ<<" "<<bestFit<<endl;
         if (oTxt)
-	  //  status = 0    : OK
-          //  status = 1    : Covariance was mad  epos defined
-          //  status = 2    : Hesse is invalid
-          //  status = 3    : Edm is above max
-          //  status = 4    : Reached call limit
-          //  status = 5    : Any other failure
-          out<<currX<<" "<<currY<<" "<<currZ<<" "<<bestFit<<" "<<res->status()<<endl;
+          out<<currX<<" "<<currY<<" "<<currZ<<" "<<bestFit<<endl;
       }
     }
     else{
@@ -813,6 +876,6 @@ int main(int argc, char**argv){
     timepdf->Write("timepdf");
     thetapdf->Write("thetapdf");
     tree.Write();
-    outfile->Write();
+    outfile->Close();
   }
 }
