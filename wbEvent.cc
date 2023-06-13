@@ -327,13 +327,13 @@ std::vector<wbPDF*> wbEvent::createDirPDFs(std::vector<wbHit> list, double time1
     double no_wavelength_cut = wavelength_cut;
 
     if (doCharge){
-      wbpdf[hdir]->GetDirPDF()->TH2F::Fill(pmtid, i.t, i.charge);
+      wbpdf[hdir]->GetDirPDF()->TH2F::Fill(pmtid, i.t, i.charge * i.user_weight);
     }
     else{
-      if (hdir == 0 || hdir == 20 || hdir == 40)
+      //if (hdir == 0 || hdir == 20 || hdir == 40)
         //cout<<"theta, phi, hdir, pmtid, t "<<theta<<" "<<phi<<" "<<hdir<<" "<<pmtid<<" "<<i.t<<endl;
       //double geoWei = 2*TMath::Pi()* (1-TMath::Cos(abs(theta)) ) - 2*TMath::Pi()* (1-TMath::Cos(abs(theta)-0.01) );
-      wbpdf[hdir]->GetDirPDF()->TH2F::Fill(pmtid, i.t);
+      wbpdf[hdir]->GetDirPDF()->TH2F::Fill(pmtid, i.t, i.user_weight);
     }
     count ++;
   }
@@ -387,6 +387,7 @@ void wbEvent::SetHitListPMT(std::vector<std::vector<double> > num){
     hit.trTheta = num[i].at(8);
     hit.trPhi = num[i].at(9);
     hit.charge = num[i].at(10);
+    hit.user_weight = num[i].at(11);
     _hitlist.push_back(hit);
   }
 }

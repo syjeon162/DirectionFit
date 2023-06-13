@@ -340,11 +340,12 @@ Double_t dirFit::calDirLikelihood( RooListProxy* _pulls, std::vector<wbEvent::wb
     //cout<<"hdir, itime and pmt id : "<<hdir<<" "<<itime<<" "<<pmtid<<endl;
     TH2F* h1 = pdf[hdir]->GetDirPDF();
     //cout<<"DirPDF x/y sizes and content: "<<h1->GetNbinsX()<<" "<<h1->GetNbinsY()<<" "<<h1->GetBinContent((int)(pmtid)+1, (int)(itime)+1)<<endl;
-    if (h1->Integral() == 0 || !h1->Integral() ){ cout<<"2D per pmt pdf has not been set ! Exit ! "<<endl; exit(0);}
+    //if (h1->Integral() == 0 || !h1->Integral() ){ cout<<"2D per pmt pdf has not been set ! Exit ! "<<endl; exit(0);}
+    if (h1->Integral() == 0 || !h1->Integral()) {cout<<"there is an empty pdf at (theta, phi) "<<theta<<" "<<phi<<endl; return 1e12;}
     h1->Scale(200./h1->Integral());
     TGraph2D pdf_pmt(h1);
 
-    double user_weight = 1;
+    double user_weight = i.user_weight;
     if (pmtid>=231) user_weight = 0;
 
     double currll;
