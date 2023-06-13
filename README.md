@@ -30,7 +30,7 @@ A fast way to start is to look at testRun.sh and try to run that file. Following
   - output file
 
   An example of running this is: 
-    ./app2 -i input_ntuple.root\
+    ./app2_dic -i input_ntuple.root\
          -n 100000 \
          -s 0 \
          --sometime 10 \
@@ -47,7 +47,7 @@ A fast way to start is to look at testRun.sh and try to run that file. Following
   - have a output text file ready
 
   An example of running the result:
-    ./app2 -i fit_ntuple.root\
+    ./app2_dic -i fit_ntuple.root\
          -n 10 \  # fit for 10 events
          -s 0 \ # no vertex smearing
          --sometime 4 \ # use a tigher time cut to select more Cherenkov light
