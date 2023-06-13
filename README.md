@@ -72,3 +72,9 @@ if you see something like (a,b,-1,c), this only appear once for each event at th
 
 By finding the mark -1, you can plot the overall reconstructed direction. 
 Once again, the z vertex can be fitted by yourself with a list of different z. Once you combine all the result list and try to find the minimum value across both direction and z, you can effectively fit the z simultaneously. Imbedding z feature significantly slow the pdf producion so it is in the process of optimizing this procedure.
+
+Update on Jun 13 2023:
+I have updated the capability of dichroicon and directional source container. 
+The app2 excutable may not be compatible. Change to app2_dic instead.
+If want to use dichroicon, add the command "--dic";
+If want to use directional source container, add the command "--source"
