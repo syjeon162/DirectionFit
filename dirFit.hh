@@ -138,6 +138,7 @@ using namespace RooFit;
 	else	hit.z = i.at(2);
         hit.t = i.at(3);
 	hit.charge = i.at(10);
+        hit.user_weight = i.at(11);
 	event.push_back(hit);
       }
       return event;
