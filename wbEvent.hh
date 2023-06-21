@@ -167,7 +167,7 @@ using namespace std;
       double x; double y; double z; double t; double wavelength; double type;
       double px; double py; double pz; double trTime;
       double trX; double trY; double trZ; double trTheta; double trPhi;
-      double charge; int pmtid;
+      double charge; int pmtid; double user_weight;
       std::string something;
     };
 
