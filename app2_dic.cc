@@ -982,7 +982,7 @@ int main(int argc, char**argv){
           double res = rep->evaluate();
           if (oTxt)
 	    out<<aaa<<" "<<xloop<<" "<<yloop<<" "<<res<<endl;
-          if (res < currRes) {
+          if (res < currRes && res > 0) {
             currRes = res;
             currX = xloop;
             currY = yloop;
