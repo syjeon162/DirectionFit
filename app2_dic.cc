@@ -122,8 +122,8 @@ void parseArguments(int argc, char**argv)
       cout << "   -a || --allLight  if all light included" << endl;
       cout << "   -t || --trueLight if only true light included" << endl;
       cout << "   -c || --scinPct   Scintillator concentration" << endl;
-      cout << "   --upper   	    event number upper limit" << endl;
-      cout << "   --lower   	    event number lower limit" << endl;
+      cout << "   --upper           event number upper limit" << endl;
+      cout << "   --lower           event number lower limit" << endl;
       cout << "   --sometime        Adding some time to prompt time cut" << endl;
       cout << "   --digitize        Using digitized simulation" <<endl;
       cout << "   --2Dpdf           Doing 2D PDFs" <<endl;
@@ -145,7 +145,7 @@ void parseArguments(int argc, char**argv)
       cout << "   --npmt            How many pmts in the detector? " <<endl;
       cout << "   --ntime           Number of bins for the time dimension" <<endl;
       cout << "   --ndir            Number of direction options" <<endl;
-      cout << "   --timeCorrection     Time correction for all the residual time" <<endl;
+      cout << "   --timeCorrection  Time correction for all the residual time" <<endl;
       cout << "   --input_ntuple    input format is ntuple" <<endl;
       cout << "   --dic             dichrocon" <<endl;
       cout << "**************************************" << endl;
@@ -500,10 +500,10 @@ int main(int argc, char**argv){
     for (int i=0;i<pmtId->size(); i++){
       if (i != pmtId->at(i)) {
         cout<<"pmt id does not correspond to the order! exit!"<<endl;
-	exit(0);
+        exit(0);
       }
       if (pmtId->at(i)>spmt) {
-	spmt = pmtId->at(i);
+        spmt = pmtId->at(i);
       }
       pmtx[i] = pmtX->at(i);
       pmty[i] = pmtY->at(i);
@@ -604,8 +604,8 @@ int main(int argc, char**argv){
     for (int i=0;i<nentries;i++){
       ttree->GetEntry(i);
 
-/////////////////////////////////////////////////////////////// Looking at the true MC info. in order to get the dicrochon situation.
-      // Dichrocon location with pmtloaction_201 id: 7,2,21,15,22,29,10,14,5,6 (a pictue provided by Sam on Slack)
+      ///////////////////////////////////////////////////////////////
+      // Looking at the true MC info. in order to get the dicrochon situation.
       int registeredPMT[12] = {0,1,4,6,7,10,11,15,17,19,25,27}; // updated Dichroicon PMT IDs
       vector<int> hitDic;
 
@@ -644,7 +644,7 @@ int main(int argc, char**argv){
           ihit += mcPMTNPE->at(iPMT); // hit index for next PMT
         } // <-- done checking cherenkov hits on dichroicons --> 
       } // <-- closing if(useDic) -->  
-///////////////////////////////////////////////////////////
+      ///////////////////////////////////////////////////////////
 
      
       if(i > evtNum || i< evtBase) continue;
@@ -665,22 +665,21 @@ int main(int argc, char**argv){
             // above 450 nm, getting the intergral of all light at 5% 500 LY
             // and Cherenkov light, using online plot digitizer.
             userWeight = 43774./20849.;
-	        //userWeight = 1;
           }
         }
 
-	pmtloc.push_back(pmtx[hitPMTID->at(ihit)]);
+        pmtloc.push_back(pmtx[hitPMTID->at(ihit)]);
         pmtloc.push_back(pmty[hitPMTID->at(ihit)]);
-	//cout<<"pmt id "<< hitPMTID->at(ihit)<<endl;
-	if (perDir || perPMT)
-	  pmtloc.push_back(hitPMTID->at(ihit));
-	else
-	  pmtloc.push_back(pmtz[hitPMTID->at(ihit)]);
-	double pmtxloc = pmtx[hitPMTID->at(ihit)];
-	double pmtyloc = pmty[hitPMTID->at(ihit)];
-	double pmtzloc = pmtz[hitPMTID->at(ihit)];
-	bbb = hitPMTID->at(ihit);
-	double ccc = hitPMTTime->at(ihit) - (sqrt((pmtxloc-trueOriginX)*(pmtxloc-trueOriginX)+(pmtyloc-trueOriginY)*(pmtyloc-trueOriginY) + (pmtzloc-trueOriginZ)*(pmtzloc-trueOriginZ))/200.) + timeCorrection;
+        //cout<<"pmt id "<< hitPMTID->at(ihit)<<endl;
+        if (perDir || perPMT)
+          pmtloc.push_back(hitPMTID->at(ihit));
+        else
+          pmtloc.push_back(pmtz[hitPMTID->at(ihit)]);
+        double pmtxloc = pmtx[hitPMTID->at(ihit)];
+        double pmtyloc = pmty[hitPMTID->at(ihit)];
+        double pmtzloc = pmtz[hitPMTID->at(ihit)];
+        bbb = hitPMTID->at(ihit);
+        double ccc = hitPMTTime->at(ihit) - (sqrt((pmtxloc-trueOriginX)*(pmtxloc-trueOriginX)+(pmtyloc-trueOriginY)*(pmtyloc-trueOriginY) + (pmtzloc-trueOriginZ)*(pmtzloc-trueOriginZ))/200.) + timeCorrection;
         double locX = mcx+ gRandom->Gaus(0, vertexSmear);
         double locY = mcy+ gRandom->Gaus(0, vertexSmear);
         double locZ = mcz+ gRandom->Gaus(0, vertexSmear);
@@ -689,10 +688,10 @@ int main(int argc, char**argv){
         h_pmtzc->Fill(pmtzloc );
         h_timeVSpos->Fill(ccc, pmtzloc);
 
-	pmtloc.push_back(ccc);
-	pmtloc.push_back(locX);
-	pmtloc.push_back(locY);
-	pmtloc.push_back(locZ);
+        pmtloc.push_back(ccc);
+        pmtloc.push_back(locX);
+        pmtloc.push_back(locY);
+        pmtloc.push_back(locZ);
 
         if (useSource){
 
@@ -704,11 +703,11 @@ int main(int argc, char**argv){
           mcv = sourceDir_y;
           mcw = sourceDir_z;
 
-	}
+        }
 
-        ggg[i] = mcu / sqrt(mcu*mcu + mcv*mcv + mcw*mcw);	
-	hhh[i] = mcv / sqrt(mcu*mcu + mcv*mcv + mcw*mcw);
-	mmm[i] = mcw / sqrt(mcu*mcu + mcv*mcv + mcw*mcw);
+        ggg[i] = mcu / sqrt(mcu*mcu + mcv*mcv + mcw*mcw);
+        hhh[i] = mcv / sqrt(mcu*mcu + mcv*mcv + mcw*mcw);
+        mmm[i] = mcw / sqrt(mcu*mcu + mcv*mcv + mcw*mcw);
 
         if (orient != 999) {
           std::cout<<"only isotropic PDF is supported as of Dec. 2022. Exiting!"<<std::endl;
@@ -724,13 +723,21 @@ int main(int argc, char**argv){
             pmtloc.push_back(TMath::Pi() - TMath::ATan(sqrt(ggg[i]*ggg[i]+hhh[i]*hhh[i])/abs(mmm[i])));
             theta = TMath::Pi() - TMath::ATan(sqrt(ggg[i]*ggg[i]+hhh[i]*hhh[i])/abs(mmm[i]));
           }
-          if (ggg[i]>=0 && hhh[i]>0) {pmtloc.push_back(TMath::ATan(hhh[i]/ggg[i])); phi = TMath::ATan(hhh[i]/ggg[i]);}
-          else if (ggg[i]<0 && hhh[i]>=0) {pmtloc.push_back(TMath::ATan(hhh[i]/ggg[i])+TMath::Pi()); phi = TMath::ATan(hhh[i]/ggg[i])+TMath::Pi();}
-          else if (ggg[i]<0 && hhh[i]<0) {pmtloc.push_back(TMath::ATan(hhh[i]/ggg[i])+ TMath::Pi()); phi = TMath::ATan(hhh[i]/ggg[i])+ TMath::Pi();}
-          else if (ggg[i]>=0 && hhh[i]<=0) {pmtloc.push_back(TMath::Pi()*2 -TMath::ATan(abs(hhh[i])/ggg[i])); phi = TMath::Pi()*2 -TMath::ATan(abs(hhh[i])/ggg[i]); }
+          if (ggg[i]>=0 && hhh[i]>0) {
+              pmtloc.push_back(TMath::ATan(hhh[i]/ggg[i])); phi = TMath::ATan(hhh[i]/ggg[i]);
+          }
+          else if (ggg[i]<0 && hhh[i]>=0) {
+              pmtloc.push_back(TMath::ATan(hhh[i]/ggg[i])+TMath::Pi()); phi = TMath::ATan(hhh[i]/ggg[i])+TMath::Pi();
+          }
+          else if (ggg[i]<0 && hhh[i]<0) {
+              pmtloc.push_back(TMath::ATan(hhh[i]/ggg[i])+ TMath::Pi()); phi = TMath::ATan(hhh[i]/ggg[i])+ TMath::Pi();
+          }
+          else if (ggg[i]>=0 && hhh[i]<=0) {
+              pmtloc.push_back(TMath::Pi()*2 -TMath::ATan(abs(hhh[i])/ggg[i])); phi = TMath::Pi()*2 -TMath::ATan(abs(hhh[i])/ggg[i]);
+          }
         }
         //cout<<"theta and phi "<<theta<<" "<<phi<<endl;
-	pmtloc.push_back(hitPMTCharge->at(ihit));
+        pmtloc.push_back(hitPMTCharge->at(ihit));
 
         pmtloc.push_back(userWeight);
 
@@ -845,8 +852,8 @@ int main(int argc, char**argv){
           pdfss[iir]->SetDirPDF(hpdf);
         }
         fepdf.Close();
-	rep->SetDirPDFs(pdfss);
-	//cout<<"testing here (dir 1 integral) "<<rep->GetDirPDFs().at(1)->GetDirPDF()->Integral()<<endl;
+        rep->SetDirPDFs(pdfss);
+        //cout<<"testing here (dir 1 integral) "<<rep->GetDirPDFs().at(1)->GetDirPDF()->Integral()<<endl;
     }
     if (ifOutputRoot){
       for (int ipmt = 0; ipmt<pdfss.size() ; ipmt++){
@@ -864,9 +871,9 @@ int main(int argc, char**argv){
         pdfss = rep->Reading_Processing_Events_PerPMT(pmtlist,"pmtpdf", iniVertex, do2Dpdf, doCharge, doCos );
       } 
       else{
-	cout<<"doing a 3D pdf generation.."<<endl;
+        cout<<"doing a 3D pdf generation.."<<endl;
         rep->SetTimeInterval(timeInterval);
-	pdfsss = rep->Reading_Processing_Events_PerPMT_timeSlice(pmtlist,"pmtpdf", iniVertex, do2Dpdf, doCharge, doCos, uppertime );
+        pdfsss = rep->Reading_Processing_Events_PerPMT_timeSlice(pmtlist,"pmtpdf", iniVertex, do2Dpdf, doCharge, doCos, uppertime );
       }
     }
     else{
@@ -879,17 +886,17 @@ int main(int argc, char**argv){
         fepdf.Close();
       }
       else {
-	rep->SetTimeInterval(timeInterval);      
+        rep->SetTimeInterval(timeInterval);
         TFile fepdf(pdf_filename.Data());
         for (int iir=0;iir<npmt_bin;iir++){
-	  for (int iit =0; iit< ntime_bin; iit++){
+          for (int iit =0; iit< ntime_bin; iit++){
             TH2F* hpdf = (TH2F*)fepdf.Get(Form("output_%d_timeSlice_%d",iir,iit));
             pdfsss[iit][iir]->SetPMTPDF(hpdf);
-	  }
+          }
         }
         fepdf.Close();      
       }
-    }	
+    }
     if (!do3D && !perDir) rep->SetPDFs(pdfss);
     else rep->SetPDFS(pdfsss);
     std::vector<std::vector<wbPDF*>> set_pdfs = rep->GetPMTPDFS();
@@ -897,14 +904,14 @@ int main(int argc, char**argv){
     cout<<"getting pmt pdfs"<<endl;
     for (int ipmt = 0; ipmt<pdfss.size() ; ipmt++){
       if (ifOutputRoot && !do3D && !perDir){ 
-	pmtpdf[ipmt] = pdfss[ipmt]->GetPMTPDF();
-	pmtpdf[ipmt]->Write(Form("output_%d",ipmt)); 
+        pmtpdf[ipmt] = pdfss[ipmt]->GetPMTPDF();
+        pmtpdf[ipmt]->Write(Form("output_%d",ipmt)); 
       }
       if (ifOutputRoot && do3D && !perDir){ 
-	for (int itime= 0; itime< pdfsss.size();itime++){
-	  pmtpdff[itime][ipmt] = pdfsss[itime][ipmt]->GetPMTPDF();
-	  pmtpdff[itime][ipmt]->Write(Form("output_%d_timeSlice_%d",ipmt,itime)); 
-  	}
+        for (int itime= 0; itime< pdfsss.size();itime++){
+          pmtpdff[itime][ipmt] = pdfsss[itime][ipmt]->GetPMTPDF();
+          pmtpdff[itime][ipmt]->Write(Form("output_%d_timeSlice_%d",ipmt,itime)); 
+          }
       }
     }
     cout<<"pmt pdf obtained"<<endl;
@@ -972,11 +979,11 @@ int main(int argc, char**argv){
         for (int yloop=0;yloop<20;yloop++){
           rep->getParVar(0)->setVal(xloop);
           rep->getParVar(1)->setVal(yloop);
-	  rep->getParVar(0)->setConstant(true);
+          rep->getParVar(0)->setConstant(true);
           rep->getParVar(1)->setConstant(true);
           double res = rep->evaluate();
           if (oTxt)
-	    out<<aaa<<" "<<xloop<<" "<<yloop<<" "<<res<<endl;
+            out<<aaa<<" "<<xloop<<" "<<yloop<<" "<<res<<endl;
           if (res < currRes && res > 0) {
             currRes = res;
             currX = xloop;
