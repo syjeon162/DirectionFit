@@ -973,7 +973,7 @@ int main(int argc, char**argv){
     double currZ=1e9;
     if (doScan){
       double currRes = 1e9;
-      for (int xloop =1;xloop<20;xloop++){
+      for (int xloop =0;xloop<20;xloop++){
         for (int yloop=0;yloop<20;yloop++){
           rep->getParVar(0)->setVal(xloop);
           rep->getParVar(1)->setVal(yloop);
