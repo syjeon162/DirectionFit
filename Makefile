@@ -3,7 +3,7 @@ LDFLAGS=-g -L$(ROOTSYS)/lib
 LDLIBS=-lRooFit -lHtml -lMinuit -lRooFitCore `root-config --glibs` 
 CC=g++
 
-TARGET= app2
+TARGET= app2_dic
 
 #all: $(TARGET)
 all: $(TARGET) $(TARGET2)

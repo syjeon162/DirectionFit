@@ -91,7 +91,7 @@ std::vector<double>* hitPMTDigitizedTime;
 std::vector<double>* hitPMTCharge;
 std::vector<double>* hitPMTDigitizedCharge;
 std::vector<int>* mcPMTID;
-std::vector<int>* mcPEIndex;
+std::vector<int>* mcPMTNPE; // replaced mcPEIndex
 std::vector<double>* mcPETime;
 std::vector<int>* mcPEProcess;
 std::vector<int>* pmtId;
@@ -385,7 +385,7 @@ void read_ntuple(std::string str){
   ttree->SetBranchAddress("hitPMTCharge", &hitPMTCharge);
   ttree->SetBranchAddress("hitPMTDigitizedCharge", &hitPMTDigitizedCharge);
   ttree->SetBranchAddress("mcPMTID", &mcPMTID);
-  ttree->SetBranchAddress("mcPEIndex", &mcPEIndex);
+  ttree->SetBranchAddress("mcPMTNPE", &mcPMTNPE);
   ttree->SetBranchAddress("mcPETime", &mcPETime);
   ttree->SetBranchAddress("mcPEProcess", &mcPEProcess);
 }
@@ -483,7 +483,7 @@ int main(int argc, char**argv){
     ttree->SetBranchAddress("hitPMTCharge", &hitPMTCharge);
     ttree->SetBranchAddress("hitPMTDigitizedCharge", &hitPMTDigitizedCharge);
     ttree->SetBranchAddress("mcPMTID", &mcPMTID);
-    ttree->SetBranchAddress("mcPEIndex", &mcPEIndex);
+    ttree->SetBranchAddress("mcPMTNPE", &mcPMTNPE);
     ttree->SetBranchAddress("mcPETime", &mcPETime);
     ttree->SetBranchAddress("mcPEProcess", &mcPEProcess);
   
@@ -606,8 +606,8 @@ int main(int argc, char**argv){
 
 /////////////////////////////////////////////////////////////// Looking at the true MC info. in order to get the dicrochon situation.
       // Dichrocon location with pmtloaction_201 id: 7,2,21,15,22,29,10,14,5,6 (a pictue provided by Sam on Slack)
-      int registeredPMT[10] = {7,2,21,15,22,29,10,14,5,6};
-      int hitDic[10] = {};
+      int registeredPMT[12] = {0,1,4,6,7,10,11,15,17,19,25,27}; // updated Dichroicon PMT IDs
+      vector<int> hitDic;
 
       if (useDic){
         double pmtxloc[mcPMTID->size()] ={};
@@ -622,33 +622,28 @@ int main(int argc, char**argv){
           pmtid[ihit] = mcPMTID->at(ihit);
         }
 
-        int dhit = 0;
-        int hitcounter = 0;
         double locx = -999;
         double locy = -999;
         double locz = -999;
         int pmtidd = 0;
+        int ihit = 0;
 
-        for (int ihit = 0; ihit< mcPETime->size(); ihit++){
+        for (int iPMT = 0; iPMT < mcPMTID->size(); iPMT++){
 
-          if (mcPEIndex->at(ihit) == 0) {
-            locx = pmtxloc[hitcounter];
-            locy = pmtyloc[hitcounter];
-            locz = pmtzloc[hitcounter];
-            pmtidd =  pmtid[hitcounter];
-            //1=Cherenkov, 0=Dark noise, 2=Scint., 3=Reem., 4=Unknown
-            if (mcPEProcess->at(ihit) == 1 ){
-              bool exists = std::find(std::begin(registeredPMT), std::end(registeredPMT), pmtidd) != std::end(registeredPMT);
-              if (exists) {
-                hitDic[dhit] = pmtidd;
-                dhit ++;
-              }
+          locx = pmtxloc[iPMT];
+          locy = pmtyloc[iPMT];
+          locz = pmtzloc[iPMT];
+          pmtidd = pmtid[iPMT];
+          //1=Cherenkov, 0=Dark noise, 2=Scint., 3=Reem., 4=Unknown
+          if (mcPEProcess->at(ihit) == 1){
+            bool isDicPMT = std::find(std::begin(registeredPMT), std::end(registeredPMT), pmtidd) != std::end(registeredPMT);
+            if (isDicPMT){
+              hitDic.push_back(pmtidd);
             }
-            hitcounter ++;
-            //cout<<"ievent, ihit, pmt id, x, y, z "<<i<<" "<<ihit<<" "<<pmtidd<<" "<<locx<<" "<<locy<<" "<<locz<<endl;    
           }
-        }
-     }
+          ihit += mcPMTNPE->at(iPMT); // hit index for next PMT
+        } // <-- done checking cherenkov hits on dichroicons --> 
+      } // <-- closing if(useDic) -->  
 ///////////////////////////////////////////////////////////
 
      
@@ -664,13 +659,13 @@ int main(int argc, char**argv){
       for (int ihit = 0; ihit< hitPMTTime->size(); ihit++){
       
         double userWeight = 1;
-        if (useDic)
-        {
-          bool exists = std::find(std::begin(hitDic), std::end(hitDic), hitPMTID->at(ihit)) != std::end(hitDic);
-          if (exists && hitPMTID->at(ihit) != 0){
-            // above 450 nm, getting the intergral of all light at 5% 500 LY and Cherenkov light, using online plot digitizer.
+        if (useDic){
+          bool isDicHit = std::find(std::begin(hitDic), std::end(hitDic), hitPMTID->at(ihit)) != std::end(hitDic);
+          if (isDicHit){
+            // above 450 nm, getting the intergral of all light at 5% 500 LY
+            // and Cherenkov light, using online plot digitizer.
             userWeight = 43774./20849.;
-	    //userWeight = 1;
+	        //userWeight = 1;
           }
         }
 
