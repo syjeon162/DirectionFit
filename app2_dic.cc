@@ -354,6 +354,9 @@ void parseArguments(int argc, char**argv)
     }
     else if (string( argv[iarg]) == "--source" ){
       useSource = true;
+      iarg++; trueDirX = atof(argv[iarg]);
+      iarg++; trueDirY = atof(argv[iarg]);
+      iarg++; trueDirZ = atof(argv[iarg]);
     }
   }
 }
@@ -496,20 +499,6 @@ int main(int argc, char**argv){
     meta_tree->SetBranchAddress("pmtX", &pmtX);
     meta_tree->SetBranchAddress("pmtY", &pmtY);
     meta_tree->SetBranchAddress("pmtZ", &pmtZ);
-    if (useSource){
-      // first check if we're using eosntuple...
-      if (meta_tree->GetBranch("source_pos_x") == NULL){
-          std::cout<<"Using --source but can't find metadata on directional source..."
-              "input root file must be an eosntuple. use /rat/proclast eosntuple in macro!"<<endl;
-          exit(0);
-      }
-      meta_tree->SetBranchAddress("source_pos_x", &source_pos_x);
-      meta_tree->SetBranchAddress("source_pos_y", &source_pos_y);
-      meta_tree->SetBranchAddress("source_pos_z", &source_pos_z);
-      meta_tree->SetBranchAddress("source_rot_x", &source_rot_x);
-      meta_tree->SetBranchAddress("source_rot_y", &source_rot_y);
-      meta_tree->SetBranchAddress("source_rot_z", &source_rot_z);
-    }
 
     meta_tree->GetEntry(0);
     int spmt = -1;
@@ -535,12 +524,9 @@ int main(int argc, char**argv){
     float sourceDir_z = -9;
 
     if (useSource){
-        // convert source rotation to source direction
-        // downward pointing source is rotated n degrees with respect to
-        // z -> y -> x axis in clockwise direction
-        sourceDir_x = TMath::Sin(source_rot_y*TMath::Pi()/180.);
-        sourceDir_y = -TMath::Cos(source_rot_y*TMath::Pi()/180.)*TMath::Sin(source_rot_x*TMath::Pi()/180.);
-        sourceDir_z = -TMath::Cos(source_rot_y*TMath::Pi()/180.)*TMath::Cos(source_rot_x*TMath::Pi()/180.);
+        sourceDir_x = trueDirX;
+        sourceDir_y = trueDirY;
+        sourceDir_z = trueDirZ;
       cout<<"using source direction "<<sourceDir_x<<" "<<sourceDir_y<<" "<<sourceDir_z<<endl;
     }
 
