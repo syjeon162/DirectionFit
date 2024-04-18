@@ -97,6 +97,12 @@ std::vector<int>* pmtId;
 std::vector<double>* pmtX;
 std::vector<double>* pmtY;
 std::vector<double>* pmtZ;
+double source_pos_x;
+double source_pos_y;
+double source_pos_z;
+double source_rot_x;
+double source_rot_y;
+double source_rot_z;
 TTree* ttree;
 
 void parseArguments(int argc, char**argv)
@@ -391,7 +397,7 @@ void read_ntuple(std::string str){
 int main(int argc, char**argv){
 
   cout<<"starting.."<<endl;
-  parseArguments( argc, argv);
+  parseArguments(argc, argv);
   cout<<"intput and output txt : "<<inputTxt.Data()<<" "<<outputTxt.Data()<<endl;
   if (ifOutputRoot) cout<<"output root file : "<<outputRoot.Data()<<endl;
 
@@ -484,15 +490,28 @@ int main(int argc, char**argv){
     ttree->SetBranchAddress("mcPETime", &mcPETime);
     ttree->SetBranchAddress("mcPEProcess", &mcPEProcess);
   
-    //add the pmt mapping from ntuple here
-    TTree* pmt_tree = (TTree*)ftemp.Get("meta");
-    pmt_tree->SetBranchAddress("pmtId", &pmtId);
-    pmt_tree->SetBranchAddress("pmtX", &pmtX);
-    pmt_tree->SetBranchAddress("pmtY", &pmtY);
-    pmt_tree->SetBranchAddress("pmtZ", &pmtZ);
-    //pmt_tree->Print();
+    //add pmt mapping and dirsource information from meta data
+    TTree* meta_tree = (TTree*)ftemp.Get("meta");
+    meta_tree->SetBranchAddress("pmtId", &pmtId);
+    meta_tree->SetBranchAddress("pmtX", &pmtX);
+    meta_tree->SetBranchAddress("pmtY", &pmtY);
+    meta_tree->SetBranchAddress("pmtZ", &pmtZ);
+    if (useSource){
+      // first check if we're using eosntuple...
+      if (meta_tree->GetBranch("source_pos_x") == NULL){
+          std::cout<<"Using --source but can't find metadata on directional source..."
+              "input root file must be an eosntuple. use /rat/proclast eosntuple in macro!"<<endl;
+          exit(0);
+      }
+      meta_tree->SetBranchAddress("source_pos_x", &source_pos_x);
+      meta_tree->SetBranchAddress("source_pos_y", &source_pos_y);
+      meta_tree->SetBranchAddress("source_pos_z", &source_pos_z);
+      meta_tree->SetBranchAddress("source_rot_x", &source_rot_x);
+      meta_tree->SetBranchAddress("source_rot_y", &source_rot_y);
+      meta_tree->SetBranchAddress("source_rot_z", &source_rot_z);
+    }
 
-    pmt_tree->GetEntry(0);
+    meta_tree->GetEntry(0);
     int spmt = -1;
     for (int i=0;i<pmtId->size(); i++){
       if (i != pmtId->at(i)) {
@@ -515,87 +534,14 @@ int main(int argc, char**argv){
     float sourceDir_y = -9;
     float sourceDir_z = -9;
 
-    float xsign = 0, ysign=0, zsign = 0;
-    int xadd = 0, yadd=0, zadd=0;
-
     if (useSource){
-
-      stringstream ss;
-      const char* stt;
-      stt = inputTxt.Data();
-      cout<<"input "<<stt<<endl;
-      int num[1000];
-      for (int i=0;i<strlen(stt); i++){
-        //cout<<i<<" "<<stt[i]<<endl;
-        if (stt[i]>='0' && stt[i]<='9'){
-          num[i] = stt[i] - '0';
-          //cout<<i<<" "<<stt[i]<<" "<<num[i]<<endl;
-        }
-      }
-      if (stt[112] == '-'){
-        xadd = 1;
-        xsign = -1;
-        if (stt[119] == '-'){
-          yadd = 1;
-          ysign = -1;
-          if (stt[126] == '-'){
-            zadd = 1;
-            zsign = -1;
-          }
-          else{// x and y are negative, z is positive
-            zadd = 0;
-            zsign = 1;
-          }
-        }
-        else{ // x is negative, y is positive
-          yadd = 0;
-          ysign = 1;
-          if (stt[125] == '-'){
-            zadd = 1;
-            zsign = -1;
-          }
-          else{// x and y are negative, z is positive
-            zadd = 0;
-            zsign = 1;
-          }
-        }
-      }
-      else{
-        xadd = 0;
-        xsign = 1;
-        if (stt[118] == '-'){
-          yadd = 1;
-          ysign = -1;
-          if (stt[125] == '-'){
-            zadd = 1;
-            zsign = -1;
-          }
-          else{// x positive, y negative, z is positive
-            zadd = 0;
-            zsign = 1;
-          }
-        }
-        else{ // x is positive, y is positive
-          yadd = 0;
-          ysign = 1;
-          if (stt[124] == '-'){
-            zadd = 1;
-            zsign = -1;
-          }
-          else{// x and y are positive, z is positive
-            zadd = 0;
-            zsign = 1;
-          }
-        }
-      }
-      cout<<"add "<<xadd<<" "<<yadd<<" "<<zadd<<endl;
-      cout<<"sign "<<xsign<<" "<<ysign<<" "<<zsign<<endl;
-      sourceDir_x = xsign * (num[114+xadd]*0.1 + num[115+xadd]*0.01 + num[116+xadd]* 0.001);
-      sourceDir_y = ysign * (num[120+xadd+yadd]*0.1 + num[121+xadd+yadd]*0.01 + num[122+xadd+yadd]* 0.001);
-      sourceDir_z = zsign * (num[126+xadd+yadd+zadd]*0.1 + num[127+xadd+yadd+zadd]*0.01 + num[128+xadd+yadd+zadd]* 0.001);
-      if (num[124+xadd+yadd+zadd] == 1 && stt[123+xadd+yadd+zadd] == '-') {sourceDir_z = -1;}
-      cout<<"using source and source direction "<<sourceDir_x<<" "<<sourceDir_y<<" "<<sourceDir_z<<endl;
-     
+        // convert source rotation to source direction
+        // downward pointing source is rotated n degrees with respect to
+        // z -> y -> x axis in clockwise direction
+        sourceDir_x = TMath::Sin(source_rot_y*TMath::Pi()/180.);
+        sourceDir_y = -TMath::Cos(source_rot_y*TMath::Pi()/180.)*TMath::Sin(source_rot_x*TMath::Pi()/180.);
+        sourceDir_z = -TMath::Cos(source_rot_y*TMath::Pi()/180.)*TMath::Cos(source_rot_x*TMath::Pi()/180.);
+      cout<<"using source direction "<<sourceDir_x<<" "<<sourceDir_y<<" "<<sourceDir_z<<endl;
     }
 
     for (int i=0;i<nentries;i++){
@@ -930,7 +876,12 @@ int main(int argc, char**argv){
     h_timeVSpos->Write("h_timeVSpos");
   }
 
-  if (!externalPDF) { cout<<"just getting pdf, not performing fit .. "<<endl; outfile->Write(); outfile->Close(); exit(1);}
+  if (!externalPDF){
+      cout<<"just getting pdf, not performing fit .. "<<endl;
+      outfile->Write();
+      outfile->Close();
+      exit(1);
+  }
 
   for (Int_t aaa = lowerEvt;aaa< upperEvt; aaa++){
 

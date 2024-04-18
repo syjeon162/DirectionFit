@@ -78,3 +78,8 @@ I have updated the capability of dichroicon and directional source container.
 The app2 excutable may not be compatible. Change to app2_dic instead.
 If want to use dichroicon, add the command "--dic";
 If want to use directional source container, add the command "--source"
+
+Update on Apr 17 2024:
+When using command "--source", the source direction is now retrieved from
+the metadata from the eosntuple file.
+Set `/rat/proclast eosntuple` to get an eosntuple output from EosSims.
